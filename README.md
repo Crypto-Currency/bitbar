@@ -18,8 +18,8 @@ you can get an updated list at:[Cryptocoinexplorer](http://btb.cryptocoinexplore
 <br>
 ### Current zip Releases:
 <pre>
-* Windows  QT [v.0.4.3.004](archive/bitbar-qt_v0_4_3_004.zip) 
-* Linux source - (none yet)
+  Windows  QT [v.0.4.3.004](archive/bitbar-qt_v0_4_3_004.zip) 
+  Linux source - (none yet)
 </pre>
 <br>
 <br>
