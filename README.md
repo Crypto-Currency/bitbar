@@ -23,10 +23,8 @@ you can get an updated list at:[Cryptocoinexplorer](http://btb.cryptocoinexplore
 <br>
 <br>
 ### Older Releases:
-<pre>
 * Windows  QT  - (none yet) 
 * Linux source - (none yet)
-</pre>
 
 
 ###  Bitbar Web Site [bitbar.co](http://bitbar.co/)
