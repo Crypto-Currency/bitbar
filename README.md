@@ -1,5 +1,5 @@
 #  BitBar
-Spiders development tree
+##Bitbar official development tree
 <br>
 ##  Based on NovaCoin
 <br>
@@ -16,9 +16,9 @@ you can get an updated list at:[Cryptocoinexplorer](http://btb.cryptocoinexplore
 <br>
 <br>
 <br>
-### Current Releases:
+### Current zip Releases:
 <pre>
-* Windows  QT  - (none yet) 
+* Windows  QT  - [v.0.4.3.004](http://github.com/bitbarcoin/bitbar/Archive/bitbar-qt_v0_4_3_004.zip) 
 * Linux source - (none yet)
 </pre>
 <br>
