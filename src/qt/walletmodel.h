@@ -92,6 +92,9 @@ public:
     bool changePassphrase(const SecureString &oldPass, const SecureString &newPass);
     // Wallet backup
     bool backupWallet(const QString &filename);
+    // Wallet Repair
+    void checkWallet(int& nMismatchSpent, qint64& nBalanceInQuestion, int& nOrphansFound);
+    void repairWallet(int& nMismatchSpent, qint64& nBalanceInQuestion, int& nOrphansFound);
 
     //PoS Information about value and time
     void getStakeWeightFromValue(const qint64& nTime, const qint64& nValue, quint64& nWeight);
