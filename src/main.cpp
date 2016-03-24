@@ -505,12 +505,14 @@ bool CTransaction::CheckTransaction() const
 }
 
 int64 CTransaction::GetMinFee(unsigned int nBlockSize, bool fAllowFree,
-                              enum GetMinFee_mode mode) const
+                              enum GetMinFee_mode mode, unsigned int nBytes) const
 {
     // Base fee is either MIN_TX_FEE or MIN_RELAY_TX_FEE
     int64 nBaseFee = (mode == GMF_RELAY) ? MIN_RELAY_TX_FEE : MIN_TX_FEE;
 
-    unsigned int nBytes = ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION);
+// changed for coin control
+//    nBytes = ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION);
+//    unsigned int nBytes = ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION);
     unsigned int nNewBlockSize = nBlockSize + nBytes;
     int64 nMinFee = (1 + (int64)nBytes / 1000) * nBaseFee;
 
@@ -990,6 +992,21 @@ int64 GetProofOfStakeReward(int64 nCoinAge)
     if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRI64d"\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
     return nSubsidy;
+}
+unsigned int GetStakeMinAge(unsigned int nTime)
+{
+//  if (nTime > VERSION2_SWITCH_TIME)
+//      return nStakeMinAgeV2; // 15 days
+//  else
+      return nStakeMinAge; //30 days
+}
+
+unsigned int GetStakeMaxAge(unsigned int nTime)
+{
+//  if (nTime > VERSION2_SWITCH_TIME)
+//      return nStakeMaxAgeV2;  // 45 days
+//  else
+      return nStakeMaxAge; // 90 days
 }
 
 static const int64 nTargetTimespan = 7 * 24 * 60 * 60;  // one week

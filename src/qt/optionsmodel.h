@@ -30,6 +30,7 @@ public:
         DisplayAddresses,  // bool
         DetachDatabases,   // bool
         Language,          // QString
+        CoinControlFeatures, //bool
         OptionIDRowCount,
     };
 

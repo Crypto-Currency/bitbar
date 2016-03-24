@@ -7,10 +7,6 @@
 ###  bitbar.conf
 <pre>
 addnode=btb.altcointech.net
-addnode=172.127.121.113
-addnode=198.0.43.101
-addnode=91.121.120.218
-addnode=94.23.54.195
 </pre>
 you can get an updated list at:[Cryptocoinexplorer](http://btb.cryptocoinexplorer.com/peerinfo)
 <br>

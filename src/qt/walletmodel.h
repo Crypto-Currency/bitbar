@@ -2,6 +2,7 @@
 #define WALLETMODEL_H
 
 #include <QObject>
+#include <vector>
 
 #include "allocators.h" /* for SecureString */
 
@@ -9,6 +10,10 @@ class OptionsModel;
 class AddressTableModel;
 class TransactionTableModel;
 class CWallet;
+class CKeyID;
+class CPubKey;
+class COutput;
+class COutPoint;
 
 QT_BEGIN_NAMESPACE
 class QTimer;
@@ -88,6 +93,10 @@ public:
     // Wallet backup
     bool backupWallet(const QString &filename);
 
+    //PoS Information about value and time
+    void getStakeWeightFromValue(const qint64& nTime, const qint64& nValue, quint64& nWeight);
+
+
     // RAI object for unlocking wallet, returned by requestUnlock()
     class UnlockContext
     {
@@ -109,6 +118,10 @@ public:
     };
 
     UnlockContext requestUnlock();
+
+	bool getPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const;
+	void getOutputs(const std::vector<COutPoint>& vOutpoints, std::vector<COutput>& vOutputs);
+	void listCoins(std::map<QString, std::vector<COutput> >& mapCoins) const;
 
 private:
     CWallet *wallet;
