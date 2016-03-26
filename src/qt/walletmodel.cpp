@@ -129,7 +129,7 @@ bool WalletModel::validateAddress(const QString &address)
     return addressParsed.IsValid();
 }
 
-WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipient> &recipients)
+WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipient> &recipients, const CCoinControl *coinControl)
 {
     qint64 total = 0;
     QSet<QString> setAddress;
@@ -161,12 +161,18 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         return DuplicateAddress;
     }
 
-    if(total > getBalance())
+    int64 nBalance = 0;
+    std::vector<COutput> vCoins;
+    wallet->AvailableCoins(vCoins, true, coinControl);
+
+    BOOST_FOREACH(const COutput& out, vCoins)
+        nBalance += out.tx->vout[out.i].nValue;
+     if(total > nBalance)
     {
         return AmountExceedsBalance;
     }
 
-    if((total + nTransactionFee) > getBalance())
+    if((total + nTransactionFee) > nBalance)
     {
         return SendCoinsReturn(AmountWithFeeExceedsBalance, nTransactionFee);
     }
@@ -186,11 +192,11 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         CWalletTx wtx;
         CReserveKey keyChange(wallet);
         int64 nFeeRequired = 0;
-        bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired);
+        bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, coinControl);
 
         if(!fCreated)
         {
-            if((total + nFeeRequired) > wallet->GetBalance())
+            if((total + nFeeRequired) > nBalance)
             {
                 return SendCoinsReturn(AmountWithFeeExceedsBalance, nFeeRequired);
             }
