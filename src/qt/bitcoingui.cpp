@@ -81,8 +81,11 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     notificator(0),
     rpcConsole(0)
 {
+  QFontDatabase::addApplicationFont(":/fonts/comic");
+  QFontDatabase::addApplicationFont(":/fonts/comicb");
     resize(850, 550);
-    setWindowTitle(tr("BitBar")+" - "+tr("Wallet")+" "+QString::fromStdString(CLIENT_BUILD));
+  setWindowTitle(tr("BitBar")+" - "+tr("Wallet")+" "+QString::fromStdString(CLIENT_BUILD));
+  setStyleSheet("QMainWindow{background-color:rgb(245,237,191)} QToolButton:!hover{background-color:rgb(255,233,142); color:black;border-style:outset; border-width:2px; border-color:darkgrey; border-radius:10px;font:11pt 'Comic Sans MS'}  QToolButton:hover{background-color:rgb(255,213,132); color:black; border-style: outset; border-width: 2px; border-radius: 10px; border-color: darkgrey;font:11pt 'Comic Sans MS'} QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey; border-radius: 10px; padding:2px 10px 2px 10px; font:11pt 'Comic Sans MS'}");
 #ifndef Q_OS_MAC
     qApp->setWindowIcon(QIcon(":icons/bitcoin"));
     setWindowIcon(QIcon(":icons/bitcoin"));
@@ -99,6 +102,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
     // Create application menu bar
     createMenuBar();
+menuBar()->setNativeMenuBar(false);// menubar on form instead
 
     // Create the toolbars
     createToolBars();
@@ -186,6 +190,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
         progressBar->setStyleSheet("QProgressBar { background-color: #e8e8e8; border: 1px solid grey; border-radius: 7px; padding: 1px; text-align: center; } QProgressBar::chunk { background: QLinearGradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #FF8000, stop: 1 orange); border-radius: 7px; margin: 0px; }");
     }
 
+    statusBar()->setStyleSheet("QStatusBar{background-color:rgb(245,237,191)}QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey; border-radius: 10px; padding:2px 10px 2px 10px; font:11pt 'Comic Sans MS'}");
     statusBar()->addWidget(progressBarLabel);
     statusBar()->addWidget(progressBar);
     statusBar()->addPermanentWidget(frameBlocks);

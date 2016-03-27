@@ -7,38 +7,17 @@
     <x>0</x>
     <y>0</y>
     <width>573</width>
-    <height>418</height>
+    <height>342</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <property name="autoFillBackground">
-   <bool>false</bool>
-  </property>
-<!-- reference
-QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey; border-radius: 10px; padding:2px 10px 2px 10px; font:11pt 'Comic Sans MS'}
--->
-  <property name="styleSheet">
-   <string notr="true">QWidget{background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0 rgba(255, 213,127, 206), stop:0.35 rgba(255, 213,127, 80), stop:0.4 rgba(255, 213,127, 80), stop:0.425 rgba(255, 213, 132, 156), stop:0.44 rgba(255, 233, 128, 80), stop:1 rgba(255, 255, 255, 0)); color yellow; font:11pt 'Comic Sans MS'} QLabel{background-color:rgba(255,255,255,0)} QMenu{padding: 2px 10px 2px 10px;background-color:rgb(235,227,181);border:2px solid grey;border-style:outset; border-radius: 10px}</string>
-  </property>
-
-<!--
-  <property name="styleSheet">
-   <string notr="true">QWidget{background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0 rgba(255, 213,127, 206), stop:0.35 rgba(255, 213,127, 80), stop:0.4 rgba(255, 213,127, 80), stop:0.425 rgba(255, 213, 132, 156), stop:0.44 rgba(255, 233, 128, 80), stop:1 rgba(255, 255, 255, 0)); color yellow; font:11pt 'Comic Sans MS'} QToolTip {background-color:rgb(245,237,191); color:black; border-style: outset; border-width: 2px; border-radius: 10px;border-color darkgrey} QLabel{background-color:rgba(255,255,255,0)} QMenu{padding: 2px 25px 2px 20px;background-color:rgb(235,227,181);border:2px solid grey;border-style:outset; border-radius: 10px}</string>
-  </property>
--->
   <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
       <widget class="QFrame" name="frame">
-<!--
-       <property name="styleSheet">
-        <string notr="true">QMenu{padding: 2px 25px 2px 20px;background-color:rgb(235,227,181);border-style: inset; border-width: 4px; border-radius: 10px;border-color grey};QMenu::item:selected{background-color:rgb(235,227,181);border-style: outset; border-width: 2px; border-radius: 10px;border-color grey};QMenu::item{background-color:rgb(235,227,181);border-style: outset; border-width: 2px; border-radius: 10px;border-color grey}
-         </string>
-       </property>
--->
        <property name="frameShape">
         <enum>QFrame::StyledPanel</enum>
        </property>
@@ -60,9 +39,6 @@ QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey
             <property name="text">
              <string>Wallet</string>
             </property>
-            <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-            </property>
            </widget>
           </item>
           <item>
@@ -70,11 +46,14 @@ QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey
             <property name="toolTip">
              <string>The displayed information may be out of date. Your wallet automatically synchronizes with the BitBar network after a connection is established, but this process has not completed yet.</string>
             </property>
+            <property name="styleSheet">
+             <string notr="true">QLabel { color: red; }</string>
+            </property>
             <property name="text">
              <string notr="true">(out of sync)</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
             </property>
            </widget>
           </item>
@@ -98,9 +77,6 @@ QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey
           <property name="fieldGrowthPolicy">
            <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
           </property>
-          <property name="labelAlignment">
-           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-          </property>
           <property name="horizontalSpacing">
            <number>12</number>
           </property>
@@ -109,9 +85,6 @@ QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey
           </property>
           <item row="0" column="0">
            <widget class="QLabel" name="label">
-            <property name="styleSheet">
-             <string notr="true"/>
-            </property>
             <property name="text">
              <string>Balance:</string>
             </property>
@@ -246,104 +219,17 @@ QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey
       </widget>
      </item>
      <item>
-      <widget class="QWidget" name="widget" native="true">
-       <layout class="QVBoxLayout" name="verticalLayout_6">
-        <item>
-         <spacer name="verticalSpacer">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
-          <item>
-           <spacer name="horizontalSpacer_3">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QPushButton" name="HomeButton">
-            <property name="minimumSize">
-             <size>
-              <width>128</width>
-              <height>128</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>128</width>
-              <height>128</height>
-             </size>
-            </property>
-            <property name="cursor">
-             <cursorShape>PointingHandCursor</cursorShape>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color:transparent</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="icon">
-             <iconset resource="../bitcoin.qrc">
-              <normaloff>:/icons/logo-128</normaloff>:/icons/logo-128</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>128</width>
-              <height>128</height>
-             </size>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer_4">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <spacer name="verticalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </widget>
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
      </item>
     </layout>
    </item>
@@ -400,12 +286,9 @@ QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey
         </item>
         <item>
          <widget class="QListView" name="listTransactions">
-<!--
           <property name="styleSheet">
-           <string notr="true">QFrame{background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0 rgba(255, 213,127, 206), stop:0.35 rgba(255, 213,127, 80), stop:0.4 rgba(255, 213,127, 80), stop:0.425 rgba(255, 213, 132, 156), stop:0.44 rgba(255, 233, 128, 80), stop:1 rgba(255, 255, 255, 0)); color yellow}; QToolTip {background-color:rgb(255,233,142); color:black; border-style: outset; border-width: 2px; border-radius: 10px;border-color darkgrey};
-</string>
+           <string notr="true">QListView { background: transparent; }</string>
           </property>
--->
           <property name="frameShape">
            <enum>QFrame::NoFrame</enum>
           </property>
@@ -423,12 +306,23 @@ QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey
        </layout>
       </widget>
      </item>
+     <item>
+      <spacer name="verticalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
     </layout>
    </item>
   </layout>
  </widget>
- <resources>
-  <include location="../bitcoin.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

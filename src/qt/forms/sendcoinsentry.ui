@@ -13,6 +13,9 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-color:rgba(245,237,191,30); QToolTip {background-color:rgb(255,233,142); color:black; border-style: outset; border-width: 2px; border-radius: 10px;border-color darkgrey};QLabel{background-color:rgba(255,255,255,0)}</string>
+  </property>
   <property name="frameShape">
    <enum>QFrame::StyledPanel</enum>
   </property>

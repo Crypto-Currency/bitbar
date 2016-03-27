@@ -35,6 +35,7 @@ TransactionView::TransactionView(QWidget *parent) :
 {
     // Build filter row
     setContentsMargins(0,0,0,0);
+    setStyleSheet("background-image: url(:/images/background); background-position: center;");
 
     QHBoxLayout *hlayout = new QHBoxLayout();
     hlayout->setContentsMargins(0,0,0,0);
@@ -167,6 +168,7 @@ void TransactionView::setModel(WalletModel *model)
 
         transactionView->setModel(transactionProxyModel);
         transactionView->setAlternatingRowColors(true);
+        transactionView->setStyleSheet("QTableView{alternate-background-color: rgba(200,133,0,100); background-color: rgba(200,133,0,100); selection-background-color: rgb(250,167,0);} QToolTip{background-color:#fa8a0a; color:black; border-style: none;} QHeaderView::section { background-color:#f6e89c}");
         transactionView->setSelectionBehavior(QAbstractItemView::SelectRows);
         transactionView->setSelectionMode(QAbstractItemView::ExtendedSelection);
         transactionView->setSortingEnabled(true);
