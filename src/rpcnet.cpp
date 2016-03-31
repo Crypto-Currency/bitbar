@@ -94,10 +94,15 @@ Value sendalert(const Array& params, bool fHelp)
     CKey key;
 
     alert.strStatusBar = params[0].get_str();
+printf("alert - message  : %s\n",alert.strStatusBar.c_str());
     alert.nMinVer = params[2].get_int();
+printf("alert - min vers : %d\n",alert.nMinVer);
     alert.nMaxVer = params[3].get_int();
+printf("alert - max vers : %d\n",alert.nMaxVer);
     alert.nPriority = params[4].get_int();
+printf("alert - priority : %d\n",alert.nPriority);
     alert.nID = params[5].get_int();
+printf("alert -   ID     : %d\n",alert.nID);
     if (params.size() > 6)
         alert.nCancel = params[6].get_int();
     alert.nVersion = PROTOCOL_VERSION;
