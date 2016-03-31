@@ -350,6 +350,7 @@ bool AppInit2()
 
     // ********************************************************* Step 2: parameter interactions
     SoftSetBoolArg("-irc", false);
+    SoftSetBoolArg("-listen", true); // just making sure
 
     fTestNet = GetBoolArg("-testnet");
     if (fTestNet) {
