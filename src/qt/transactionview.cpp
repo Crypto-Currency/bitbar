@@ -35,7 +35,7 @@ TransactionView::TransactionView(QWidget *parent) :
 {
     // Build filter row
     setContentsMargins(0,0,0,0);
-    setStyleSheet("background-image: url(:/images/background); background-position: center;");
+    setStyleSheet("QWidget{background-image: url(:/images/background); background-position: center;} QMenu{padding: 2px 25px 2px 20px;background-color:rgb(235,227,181);border:2px solid grey;border-style:outset; border-radius: 10px}");
 
     QHBoxLayout *hlayout = new QHBoxLayout();
     hlayout->setContentsMargins(0,0,0,0);
