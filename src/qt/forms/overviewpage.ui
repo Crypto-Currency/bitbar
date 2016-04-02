@@ -297,7 +297,7 @@ QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="styleSheet">
-             <string notr="true">QToolTip{padding: 2px 10px 2px 10px; background-color:rgb(255,233,142); color:black; border-style: outset; border-width: 2px darkgrey} QPushButton{background-color:transparent}</string>
+             <string notr="true">QToolTip{padding: 2px 10px 2px 10px; background-color:rgb(255,233,142); color:black; border: 2px darkgrey} QPushButton{background-color:transparent}</string>
             </property>
             <property name="text">
              <string/>
