@@ -279,7 +279,7 @@ QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey
           <item>
            <widget class="QPushButton" name="HomeButton">
             <property name="toolTip">
-             <string>Click to go to Bitbar Home page.</string>
+             <string> Click to go to Bitbar Home page. </string>
             </property>
             <property name="minimumSize">
              <size>
@@ -297,7 +297,7 @@ QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="styleSheet">
-             <string notr="true">QToolTip{padding: 2px 10px 2px 10px; background-color:rgb(255,233,142); color:black; border: 2px darkgrey} QPushButton{background-color:transparent}</string>
+             <string notr="true">QToolTip{background-color:rgb(255,233,142); color:black; border:2px solid grey} QPushButton{background-color:transparent}</string>
             </property>
             <property name="text">
              <string/>

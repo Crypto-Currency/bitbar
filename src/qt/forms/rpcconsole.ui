@@ -7,18 +7,26 @@
     <x>0</x>
     <y>0</y>
     <width>740</width>
-    <height>450</height>
+    <height>491</height>
    </rect>
+  </property>
+  <property name="font">
+   <font>
+    <family>Ubuntu</family>
+   </font>
   </property>
   <property name="windowTitle">
    <string>BitBar - Debug window</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">background-image: url(:/images/background); background-position: center;</string>
+   <string notr="true">background-color: rgb(245,237,191);</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="styleSheet">
+      <string notr="true">QWidget{background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0 rgba(255, 213,127, 206), stop:0.35 rgba(255, 213,127, 80), stop:0.4 rgba(255, 213,127, 80), stop:0.425 rgba(255, 213, 132, 156), stop:0.44 rgba(255, 233, 128, 80), stop:1 rgba(255, 255, 255, 0)); color yellow} QLabel{background-color:rgba(255,255,255,0)} QPushButton{padding: 2px 10px 2px 10px; background-color:rgb(255,213,132); color:black; border-style: outset; border-width: 2px; border-radius: 10px; border-color: darkgrey} QMenu{padding: 2px 10px 2px 10px;background-color:rgb(235,227,181);border:2px solid grey}</string>
+     </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
