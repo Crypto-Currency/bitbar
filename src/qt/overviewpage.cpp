@@ -114,7 +114,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
     // clicking on logo opens web browser to home page
     connect(ui->HomeButton, SIGNAL (released()), this, SLOT (handleHomeButton()));
     ui->HomeButton->setToolTip(tr("Click to go to Bitbar Home page."));
-    ui->HomeButton->setStyleSheet("QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey; border-radius: 10px; padding:2px 10px 2px 10px; font:11pt 'Comic Sans MS'}");
+    ui->HomeButton->setStyleSheet("QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey; padding:2px 10px 2px 10px;}");
     // init "out of sync" warning labels
     ui->labelWalletStatus->setText("(" + tr("out of sync") + ")");
     ui->labelTransactionsStatus->setText("(" + tr("out of sync") + ")");

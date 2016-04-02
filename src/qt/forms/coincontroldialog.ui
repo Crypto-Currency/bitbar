@@ -10,9 +10,25 @@
     <height>500</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <family>Ubuntu</family>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Coin Control</string>
   </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+     <property name="styleSheet">
+      <string notr="true">QWidget{background-image: url(:/images/background); background-position: center}</string>
+     </property>
+<!--
+  <property name="styleSheet">
+   <string notr="true">background-color: rgba(255, 213, 127,50);</string>
+  </property>
+-->
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayoutTop" stretch="0,0,0,0">
@@ -379,7 +395,7 @@
         <height>41</height>
        </rect>
       </property>
-      <layout class="QHBoxLayout" name="horizontalLayoutPanel" stretch="0,0,0,0,0">
+      <layout class="QHBoxLayout" name="horizontalLayoutPanel" stretch="0,0,0,0">
        <property name="spacing">
         <number>14</number>
        </property>
@@ -425,14 +441,6 @@
          </property>
         </widget>
        </item>
-<!--       <item>
-        <widget class="QLabel" name="labelLocked">
-         <property name="text">
-          <string>(1 locked)</string>
-         </property>
-        </widget>
-       </item>
--->
        <item>
         <spacer name="horizontalSpacer">
          <property name="orientation">
@@ -459,7 +467,7 @@
       <bool>false</bool>
      </property>
      <property name="columnCount">
-      <number>11</number>
+      <number>12</number>
      </property>
      <attribute name="headerShowSortIndicator" stdset="0">
       <bool>true</bool>
@@ -480,9 +488,9 @@
      <column>
       <property name="text">
        <string>Confirms</string>
-	   </property>
-	   <property name="toolTip">
-		<string>Confirmed</string>
+      </property>
+      <property name="toolTip">
+       <string>Confirmed</string>
       </property>
      </column>
      <column>
@@ -500,7 +508,7 @@
        <string>Address</string>
       </property>
      </column>
-	 <column>
+     <column>
       <property name="text">
        <string>Date</string>
       </property>
@@ -557,6 +565,8 @@
    <header>coincontroltreewidget.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../bitcoin.qrc"/>
+ </resources>
  <connections/>
 </ui>

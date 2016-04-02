@@ -10,22 +10,11 @@
     <height>380</height>
    </rect>
   </property>
-  <property name="font">
-   <font>
-    <family>Comic Sans MS</family>
-    <pointsize>11</pointsize>
-    <weight>50</weight>
-    <italic>false</italic>
-    <bold>false</bold>
-   </font>
-  </property>
   <property name="windowTitle">
    <string>Address Book</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">QWidget{background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0 rgba(255, 213,127, 206), stop:0.35 rgba(255, 213,127, 80), stop:0.4 rgba(255, 213,127, 80), stop:0.425 rgba(255, 213, 132, 156), stop:0.44 rgba(255, 233, 128, 80), stop:1 rgba(255, 255, 255, 0)); color yellow; font:11pt 'Comic Sans MS'}
-QPushButton{background-color:rgb(255,213,132); color:black; border-style: outset; border-width: 2px; border-radius: 10px; border-color: darkgrey;font:11pt 'Comic Sans MS'}
-</string>
+   <string notr="true">QWidget{background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0 rgba(255, 213,127, 206), stop:0.35 rgba(255, 213,127, 80), stop:0.4 rgba(255, 213,127, 80), stop:0.425 rgba(255, 213, 132, 156), stop:0.44 rgba(255, 233, 128, 80), stop:1 rgba(255, 255, 255, 0)); color yellow} QPushButton{ padding: 2px 10px 2px 10px; background-color:rgb(255,213,132); color:black; border-style: outset; border-width: 2px; border-radius: 10px; border-color: darkgrey}</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
