@@ -22,7 +22,7 @@
    <bool>false</bool>
   </property>
      <property name="styleSheet">
-      <string notr="true">QWidget{background-image: url(:/images/background); background-position: center}</string>
+      <string notr="true">QWidget{background-image: url(:/images/background); background-position: center} QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey; padding:2px 10px 2px 10px} QMenu{background-color:rgb(255,233,142); color:black; border: 2px solid grey; padding:2px 10px 2px 10px}</string>
      </property>
 <!--
   <property name="styleSheet">

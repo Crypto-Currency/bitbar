@@ -15,6 +15,7 @@
 #include <QList>
 #include <QColor>
 #include <QTimer>
+#include <QMenu>
 #include <QIcon>
 #include <QDateTime>
 #include <QtAlgorithms>

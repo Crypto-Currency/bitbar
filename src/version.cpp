@@ -38,7 +38,7 @@ const std::string CLIENT_NAME("BitBar");
 #ifdef GIT_ARCHIVE
 #    define GIT_COMMIT_ID "32a928e"
 //#    define GIT_COMMIT_DATE "$Format:%cD"
-#    define GIT_COMMIT_DATE "Dec 6 2015"
+#    define GIT_COMMIT_DATE "Apr 15 2016"
 #endif
 
 #define BUILD_DESC_FROM_COMMIT(maj,min,rev,build,commit) \

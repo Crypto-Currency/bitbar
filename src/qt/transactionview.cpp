@@ -35,7 +35,7 @@ TransactionView::TransactionView(QWidget *parent) :
 {
     // Build filter row
     setContentsMargins(0,0,0,0);
-    setStyleSheet("QWidget{background-image: url(:/images/background); background-position: center;} QMenu{padding: 2px 25px 2px 20px;background-color:rgb(235,227,181);border:2px solid grey;border-style:outset; border-radius: 10px}");
+    setStyleSheet("QWidget{background-image: url(:/images/background); background-position: center} QMenu{padding: 2px 10px 2px 10px;background-color:rgb(235,227,181);border:2px solid grey}");
 
     QHBoxLayout *hlayout = new QHBoxLayout();
     hlayout->setContentsMargins(0,0,0,0);
@@ -168,7 +168,7 @@ void TransactionView::setModel(WalletModel *model)
 
         transactionView->setModel(transactionProxyModel);
         transactionView->setAlternatingRowColors(true);
-        transactionView->setStyleSheet("QTableView{alternate-background-color: rgba(200,133,0,100); background-color: rgba(200,133,0,100); selection-background-color: rgb(250,167,0);} QToolTip{background-color:#fa8a0a; color:black; border-style: none;} QHeaderView::section { background-color:#f6e89c}");
+        transactionView->setStyleSheet("QTableView{alternate-background-color: rgba(200,133,0,50); background-color: rgba(200,133,0,50); selection-background-color: rgb(250,167,0);} QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey; padding:2px 10px 2px 10px} QHeaderView::section{background-color:#f6e89c;} QMenu{background-color:rgb(255,233,142); color:black; border: 2px solid grey; padding:2px 10px 2px 10px}");
         transactionView->setSelectionBehavior(QAbstractItemView::SelectRows);
         transactionView->setSelectionMode(QAbstractItemView::ExtendedSelection);
         transactionView->setSortingEnabled(true);
