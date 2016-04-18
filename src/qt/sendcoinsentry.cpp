@@ -25,6 +25,9 @@ SendCoinsEntry::SendCoinsEntry(QWidget *parent) :
     ui->addAsLabel->setPlaceholderText(tr("Enter a label for this address to add it to your address book"));
     ui->payTo->setPlaceholderText(tr("Enter a BitBar address (e.g. BZo1ga6xuKuQ7JV7M9rGDoxdbYwV5zgQJ5)"));
 #endif
+//ui->payAmount->StyleSheet("QComboBox{padding: 2px 10px 2px 10px;background-color:rgb(235,227,181);border:2px solid grey}");
+
+ui->payAmount->setStyleSheet("padding: 2px 25px 2px 2px;background-color:rgb(235,227,181);border:2px solid grey");
     setFocusPolicy(Qt::TabFocus);
     setFocusProxy(ui->payTo);
 
