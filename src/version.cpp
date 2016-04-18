@@ -2,7 +2,7 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #include <string>
-
+#include <time.h>
 #include "version.h"
 
 // Name of client reported in the 'version' message. Report the same name
@@ -38,7 +38,13 @@ const std::string CLIENT_NAME("BitBar");
 #ifdef GIT_ARCHIVE
 #    define GIT_COMMIT_ID "32a928e"
 //#    define GIT_COMMIT_DATE "$Format:%cD"
-#    define GIT_COMMIT_DATE "Apr 15 2016"
+//#    define GIT_COMMIT_DATE "Apr 15 2016"
+
+//   when cross compiling for windows, the commit date shows
+//   in the rpcconsole build date as "$Format:%cD"
+  time_t t=time(NULL);
+  struct tm *tm=localtime(&t);
+  #define GIT_COMMIT_DATE=asctime(tm);
 #endif
 
 #define BUILD_DESC_FROM_COMMIT(maj,min,rev,build,commit) \
@@ -62,6 +68,7 @@ const std::string CLIENT_NAME("BitBar");
 #        define BUILD_DATE __DATE__ ", " __TIME__
 #    endif
 #endif
+
 
 const std::string CLIENT_BUILD(BUILD_DESC CLIENT_VERSION_SUFFIX);
 const std::string CLIENT_DATE(BUILD_DATE);
