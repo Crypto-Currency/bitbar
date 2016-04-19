@@ -44,7 +44,7 @@ const std::string CLIENT_NAME("BitBar");
 //   in the rpcconsole build date as "$Format:%cD"
   time_t t=time(NULL);
   struct tm *tm=localtime(&t);
-  #define GIT_COMMIT_DATE=asctime(tm);
+  #define GIT_COMMIT_DATE asctime(tm)
 #endif
 
 #define BUILD_DESC_FROM_COMMIT(maj,min,rev,build,commit) \
