@@ -91,6 +91,7 @@ private:
     QAction *encryptWalletAction;
     QAction *checkWalletAction;
     QAction *repairWalletAction;
+    QAction *zapWalletAction;
     QAction *backupWalletAction;
     QAction *changePassphraseAction;
     QAction *aboutQtAction;
@@ -176,6 +177,10 @@ private slots:
     void checkWallet();
     /** Repair the wallet */
     void repairWallet();
+
+    /** zap the wallet */
+    void zapWallet();
+
     /** Backup the wallet */
     void backupWallet();
     /** Change encrypted wallet passphrase */
