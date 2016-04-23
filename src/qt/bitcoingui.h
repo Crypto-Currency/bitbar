@@ -117,6 +117,8 @@ private:
     /** Create system tray (notification) icon */
     void createTrayIcon();
 
+  void splashMessage(const std::string &message);
+
 public slots:
     /** Set number of connections shown in the UI */
     void setNumConnections(int count);

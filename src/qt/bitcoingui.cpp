@@ -23,6 +23,7 @@
 #include "guiconstants.h"
 #include "askpassphrasedialog.h"
 #include "notificator.h"
+#include "ui_interface.h"
 #include "guiutil.h"
 #include "rpcconsole.h"
 #include "wallet.h"
@@ -62,6 +63,7 @@
 #include <QSettings>
 #include <QDesktopWidget>
 #include <QListWidget>
+#include <QSplashScreen>
 
 #include <iostream>
 
@@ -69,6 +71,11 @@ extern CWallet *pwalletMain;
 extern int64 nLastCoinStakeSearchInterval;
 extern unsigned int nStakeTargetSpacing;
 extern bool fWalletUnlockMintOnly;
+
+// Need a global reference for the notifications to find the GUI
+static BitcoinGUI *guiref;
+static QSplashScreen *splashref;
+
 
 BitcoinGUI::BitcoinGUI(QWidget *parent):
     QMainWindow(parent),
@@ -931,18 +938,31 @@ void BitcoinGUI::zapWallet()
   if(!walletModel)
     return;
 
+  // bring up splash screen
+  QSplashScreen splash(QPixmap(":/images/splash"), 0);
+//  if (GetBoolArg("-splash", true) && !GetBoolArg("-min"))
+//  {
+    splash.show();
+    splash.setAutoFillBackground(true);
+    splashref = &splash;
+//  }
+
   // Zap the wallet as requested by user 1= save meta data  2=remove meta data 
   // needed to restore wallet transaction meta data after -zapwallettxes
   std::vector<CWalletTx> vWtx;
 
-  setStatusTip(tr("Zapping all transactions from wallet..."));
+
+  splashMessage(_("Zapping all transactions from wallet..."));
+//  setStatusTip(tr("Zapping all transactions from wallet..."));
   printf("Zapping all transactions from wallet...\n");
 
   pwalletMain = new CWallet("wallet.dat");
   DBErrors nZapWalletRet = pwalletMain->ZapWalletTx(vWtx);
   if (nZapWalletRet != DB_LOAD_OK)
   {
-    setStatusTip(tr("Error loading wallet.dat: Wallet corrupted"));
+    splashMessage(_("Error loading wallet.dat: Wallet corrupted"));
+// close spash screen
+//    setStatusTip(tr("Error loading wallet.dat: Wallet corrupted"));
     printf("Error loading wallet.dat: Wallet corrupted\n");
     return;
   }
@@ -950,7 +970,8 @@ void BitcoinGUI::zapWallet()
   delete pwalletMain;
   pwalletMain = NULL;
 
-  setStatusTip(tr("Loading wallet..."));
+  splashMessage(_("Loading wallet..."));
+//  setStatusTip(tr("Loading wallet..."));
   printf("Loading wallet...\n");
 
   int64 nStart = GetTimeMillis();
@@ -964,7 +985,8 @@ void BitcoinGUI::zapWallet()
   {
     if (nLoadWalletRet == DB_CORRUPT)
     {
-      setStatusTip(tr("Error loading wallet.dat: Wallet corrupted"));
+    splashMessage(_("Error loading wallet.dat: Wallet corrupted"));
+//      setStatusTip(tr("Error loading wallet.dat: Wallet corrupted"));
       printf("Error loading wallet.dat: Wallet corrupted\n");
     }
     else if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
@@ -990,10 +1012,12 @@ void BitcoinGUI::zapWallet()
     } 
   }
   
-  setStatusTip(tr("Wallet loaded..."));
+  splashMessage(_("Wallet loaded..."));
+//  setStatusTip(tr("Wallet loaded..."));
   printf(" zap wallet  load     %15"PRI64d"ms\n", GetTimeMillis() - nStart);
 
-  setStatusTip(tr("Loading labels..."));
+  splashMessage(_("Loaded lables..."));
+//  setStatusTip(tr("Loading labels..."));
   printf(" zap wallet  loading metadata\n");
   // Restore wallet transaction metadata after -zapwallettxes=1
   BOOST_FOREACH(const CWalletTx& wtxOld, vWtx)
@@ -1014,14 +1038,35 @@ void BitcoinGUI::zapWallet()
       copyTo->WriteToDisk();
     }
   }
-  setStatusTip(tr("scanning for transactions..."));
+  splashMessage(_("scanning for transactions..."));
+//  setStatusTip(tr("scanning for transactions..."));
   printf(" zap wallet  scanning for transactions\n");
 
   pwalletMain->ScanForWalletTransactions(pindexGenesisBlock, true);
   pwalletMain->ReacceptWalletTransactions();
-  setStatusTip(tr(""));
+  splashMessage(_("Done."));
+//  setStatusTip(tr(""));
   printf(" zap wallet  done.\n");
+
+//  close splash screen
+  if (splashref)
+  {
+//    BitcoinGUI window;
+//    guiref = &window;
+    splash.close();
+//    splash.finish(&window);
+  }
 }
+
+void BitcoinGUI::splashMessage(const std::string &message)
+{
+  if(splashref)
+  {
+    splashref->showMessage(QString::fromStdString(message), Qt::AlignBottom|Qt::AlignHCenter, QColor(120,80,25));
+    QApplication::instance()->processEvents();
+  }
+}
+
 
 void BitcoinGUI::backupWallet()
 {

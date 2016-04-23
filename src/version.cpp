@@ -37,14 +37,14 @@ const std::string CLIENT_NAME("BitBar");
 #define GIT_ARCHIVE 1
 #ifdef GIT_ARCHIVE
 #    define GIT_COMMIT_ID "32a928e"
-//#    define GIT_COMMIT_DATE "$Format:%cD"
+#    define GIT_COMMIT_DATE __DATE__
 //#    define GIT_COMMIT_DATE "Apr 15 2016"
 
 //   when cross compiling for windows, the commit date shows
 //   in the rpcconsole build date as "$Format:%cD"
   time_t t=time(NULL);
   struct tm *tm=localtime(&t);
-  #define GIT_COMMIT_DATE asctime(tm)
+//  #define GIT_COMMIT_DATE asctime(tm)
 #endif
 
 #define BUILD_DESC_FROM_COMMIT(maj,min,rev,build,commit) \
