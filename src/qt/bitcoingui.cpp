@@ -64,6 +64,7 @@
 #include <QDesktopWidget>
 #include <QListWidget>
 #include <QSplashScreen>
+#include <QTableView>
 
 #include <iostream>
 
@@ -72,10 +73,7 @@ extern int64 nLastCoinStakeSearchInterval;
 extern unsigned int nStakeTargetSpacing;
 extern bool fWalletUnlockMintOnly;
 
-// Need a global reference for the notifications to find the GUI
-static BitcoinGUI *guiref;
 static QSplashScreen *splashref;
-
 
 BitcoinGUI::BitcoinGUI(QWidget *parent):
     QMainWindow(parent),
@@ -940,30 +938,29 @@ void BitcoinGUI::zapWallet()
 
   // bring up splash screen
   QSplashScreen splash(QPixmap(":/images/splash"), 0);
-//  if (GetBoolArg("-splash", true) && !GetBoolArg("-min"))
-//  {
-    splash.show();
-    splash.setAutoFillBackground(true);
-    splashref = &splash;
-//  }
+  splash.show();
+  splash.setAutoFillBackground(true);
+  splashref = &splash;
 
-  // Zap the wallet as requested by user 1= save meta data  2=remove meta data 
-  // needed to restore wallet transaction meta data after -zapwallettxes
+  // Zap the wallet as requested by user
+  // 1= save meta data
+  // 2=remove meta data needed to restore wallet transaction meta data after -zapwallettxes
   std::vector<CWalletTx> vWtx;
 
 
   splashMessage(_("Zapping all transactions from wallet..."));
-//  setStatusTip(tr("Zapping all transactions from wallet..."));
   printf("Zapping all transactions from wallet...\n");
+
+// clear tables
 
   pwalletMain = new CWallet("wallet.dat");
   DBErrors nZapWalletRet = pwalletMain->ZapWalletTx(vWtx);
   if (nZapWalletRet != DB_LOAD_OK)
   {
     splashMessage(_("Error loading wallet.dat: Wallet corrupted"));
-// close spash screen
-//    setStatusTip(tr("Error loading wallet.dat: Wallet corrupted"));
     printf("Error loading wallet.dat: Wallet corrupted\n");
+    if (splashref)
+      splash.close();
     return;
   }
 
@@ -971,14 +968,12 @@ void BitcoinGUI::zapWallet()
   pwalletMain = NULL;
 
   splashMessage(_("Loading wallet..."));
-//  setStatusTip(tr("Loading wallet..."));
   printf("Loading wallet...\n");
 
   int64 nStart = GetTimeMillis();
   bool fFirstRun = true;
   pwalletMain = new CWallet("wallet.dat");
 
-// clear tables
 
   DBErrors nLoadWalletRet = pwalletMain->LoadWallet(fFirstRun);
   if (nLoadWalletRet != DB_LOAD_OK)
@@ -986,7 +981,6 @@ void BitcoinGUI::zapWallet()
     if (nLoadWalletRet == DB_CORRUPT)
     {
     splashMessage(_("Error loading wallet.dat: Wallet corrupted"));
-//      setStatusTip(tr("Error loading wallet.dat: Wallet corrupted"));
       printf("Error loading wallet.dat: Wallet corrupted\n");
     }
     else if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
@@ -1003,7 +997,9 @@ void BitcoinGUI::zapWallet()
     {
       setStatusTip(tr("Wallet needed to be rewritten: restart BitBar to complete"));
       printf("Wallet needed to be rewritten: restart BitBar to complete\n");
-      return;// InitError(strErrors.str());
+      if (splashref)
+        splash.close();
+      return;
     }
     else
     {
@@ -1013,12 +1009,11 @@ void BitcoinGUI::zapWallet()
   }
   
   splashMessage(_("Wallet loaded..."));
-//  setStatusTip(tr("Wallet loaded..."));
   printf(" zap wallet  load     %15"PRI64d"ms\n", GetTimeMillis() - nStart);
 
   splashMessage(_("Loaded lables..."));
-//  setStatusTip(tr("Loading labels..."));
   printf(" zap wallet  loading metadata\n");
+
   // Restore wallet transaction metadata after -zapwallettxes=1
   BOOST_FOREACH(const CWalletTx& wtxOld, vWtx)
   {
@@ -1039,23 +1034,16 @@ void BitcoinGUI::zapWallet()
     }
   }
   splashMessage(_("scanning for transactions..."));
-//  setStatusTip(tr("scanning for transactions..."));
   printf(" zap wallet  scanning for transactions\n");
 
   pwalletMain->ScanForWalletTransactions(pindexGenesisBlock, true);
   pwalletMain->ReacceptWalletTransactions();
   splashMessage(_("Done."));
-//  setStatusTip(tr(""));
   printf(" zap wallet  done.\n");
 
 //  close splash screen
   if (splashref)
-  {
-//    BitcoinGUI window;
-//    guiref = &window;
     splash.close();
-//    splash.finish(&window);
-  }
 }
 
 void BitcoinGUI::splashMessage(const std::string &message)
