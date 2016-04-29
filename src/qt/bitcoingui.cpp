@@ -1038,12 +1038,15 @@ void BitcoinGUI::zapWallet()
 
   pwalletMain->ScanForWalletTransactions(pindexGenesisBlock, true);
   pwalletMain->ReacceptWalletTransactions();
-  splashMessage(_("Done."));
-  printf(" zap wallet  done.\n");
+  splashMessage(_("Please restart your wallet."));
+  printf(" zap wallet  done - please restart wallet.\n");
+  sleep (10);
 
 //  close splash screen
   if (splashref)
     splash.close();
+
+  QMessageBox::warning(this, tr("Zap Wallet Finished."), tr("Please restart your wallet for changes to take effect."));
 }
 
 void BitcoinGUI::splashMessage(const std::string &message)
