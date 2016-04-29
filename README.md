@@ -13,15 +13,10 @@ you can get an updated list at:[Cryptocoinexplorer](http://btb.cryptocoinexplore
 <br>
 <br>
 ### Current zip Releases:
-*  Windows  QT [v.0.4.3.004](https://github.com/bitbarcoin/bitbar/blob/master/archive/bitbar-qt_v0_4_3_004.zip) 
-*  Linux source - (none yet)
+*  Windows  QT [v.0.4.4.005](https://drive.google.com/file/d/0B1cnD3W8c0jtWGlNUXEzdTFkMUE/view?usp=sharing) 
 <br>
 <br>
 <br>
-
-### Older Releases:
-* Windows  QT  - (none yet) 
-* Linux source - (none yet)
 
 
 ###  Bitbar Web Site [bitbar.co](http://bitbar.co/)
