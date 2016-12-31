@@ -39,7 +39,7 @@ const std::string CLIENT_NAME("BitBar");
 #ifdef GIT_ARCHIVE
 #    define GIT_COMMIT_ID "32a928e"
 #    define GIT_COMMIT_DATE __DATE__
-//#    define GIT_COMMIT_DATE "Apr 15 2016"
+//#    define GIT_COMMIT_DATE "Dec 31 2016"
 
 //   when cross compiling for windows, the commit date shows
 //   in the rpcconsole build date as "$Format:%cD"
