@@ -72,11 +72,15 @@ sudo apt-get install libqrencode-dev
 If using Boost 1.37, append -mt to the boost libraries in the makefile.
 
 if you can't find libdb 4.8 you can use the newest version for your distro.
+ sudo apt-get install libdb-dev		(5.3)
+ sudo apt-get install libdb++-dev
+ sudo apt-get install libboost-all-dev	(1.58)
 
-sudo apt-get install libdb-dev		(5.3)
-sudo apt-get install libdb++-dev
-sudo apt-get install libboost-all-dev	(1.58)
 
+use the following steps to build (no UPnP support):
+ cd [your bitbar dir]/src
+ make -f makefile.unix USE_UPNP=-
+ strip bitbard
 
 Dependency Build Instructions: Gentoo
 -------------------------------------
