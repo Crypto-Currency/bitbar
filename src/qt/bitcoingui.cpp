@@ -288,10 +288,12 @@ void BitcoinGUI::createActions()
     toggleHideAction = new QAction(QIcon(":/icons/bitcoin"), tr("&Show / Hide"), this);
     encryptWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Encrypt Wallet..."), this);
     encryptWalletAction->setToolTip(tr("Encrypt or decrypt wallet"));
-    encryptWalletAction->setCheckable(true);
 
     checkWalletAction = new QAction(QIcon(":/icons/inspect"), tr("&Check Wallet..."), this);
     checkWalletAction->setStatusTip(tr("Check wallet integrity and report findings"));
+
+    unlockWalletStakeAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock To Stake..."), this);
+    unlockWalletStakeAction->setStatusTip(tr("Unlock wallet for Staking only"));
 
     repairWalletAction = new QAction(QIcon(":/icons/repair"), tr("&Repair Wallet..."), this);
     repairWalletAction->setStatusTip(tr("Fix wallet integrity and remove orphans"));
@@ -318,6 +320,8 @@ void BitcoinGUI::createActions()
     connect(toggleHideAction, SIGNAL(triggered()), this, SLOT(toggleHidden()));
     connect(encryptWalletAction, SIGNAL(triggered(bool)), this, SLOT(encryptWallet(bool)));
     connect(checkWalletAction, SIGNAL(triggered()), this, SLOT(checkWallet()));
+
+    connect(unlockWalletStakeAction, SIGNAL(triggered()), this, SLOT(unlockWalletStake()));
     connect(repairWalletAction, SIGNAL(triggered()), this, SLOT(repairWallet()));
     connect(zapWalletAction, SIGNAL(triggered()), this, SLOT(zapWallet()));
     connect(backupWalletAction, SIGNAL(triggered()), this, SLOT(backupWallet()));
@@ -348,8 +352,9 @@ void BitcoinGUI::createMenuBar()
     QMenu *wallet = appMenuBar->addMenu(tr("&Wallet"));
      wallet->addAction(backupWalletAction);
     wallet->addSeparator();
-   wallet->addAction(encryptWalletAction);
+    wallet->addAction(encryptWalletAction);
     wallet->addAction(changePassphraseAction);
+    wallet->addAction(unlockWalletStakeAction);
     wallet->addSeparator();
     wallet->addAction(checkWalletAction);
     wallet->addAction(repairWalletAction);
@@ -902,6 +907,27 @@ void BitcoinGUI::checkWallet()
                         .arg(nMismatchSpent)
                         .arg(BitcoinUnits::formatWithUnit(walletModel->getOptionsModel()->getDisplayUnit(), nBalanceInQuestion,true))
                         .arg(nOrphansFound),true);
+}
+
+
+void BitcoinGUI::unlockWalletStake()
+{
+  if(!walletModel)
+    return;
+
+  // Unlock wallet when requested by user
+  if(walletModel->getEncryptionStatus() == WalletModel::Locked)
+  {
+    AskPassphraseDialog dlg(AskPassphraseDialog::Unlock, this);
+    dlg.setModel(walletModel);
+    dlg.exec();
+
+    // Only show message if unlock is sucessfull.
+    if(walletModel->getEncryptionStatus() == WalletModel::Unlocked)
+      error(tr("Unlock Wallet Information"),
+        tr("Wallet has been unlocked. \n"
+          "Proof of Stake has started.\n"),true);
+  }
 }
 
 void BitcoinGUI::repairWallet()
