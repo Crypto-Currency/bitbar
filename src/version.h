@@ -45,8 +45,8 @@ static const int BIP0031_VERSION = 60000;
 static const int MEMPOOL_GD_VERSION = 60002;
 
 #define DISPLAY_VERSION_MAJOR       0
-#define DISPLAY_VERSION_MINOR       4
-#define DISPLAY_VERSION_REVISION    4
-#define DISPLAY_VERSION_BUILD       007
+#define DISPLAY_VERSION_MINOR       7
+#define DISPLAY_VERSION_REVISION    5
+#define DISPLAY_VERSION_BUILD       1
 
 #endif
