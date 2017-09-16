@@ -974,6 +974,9 @@ void BitcoinGUI::zapWallet()
   if(!walletModel)
     return;
 
+  progressBarLabel->setText(tr("Starting zapwallettxes..."));
+  progressBarLabel->setVisible(true);
+
   // bring up splash screen
   QSplashScreen splash(QPixmap(":/images/splash"), 0);
   splash.show();
@@ -985,7 +988,7 @@ void BitcoinGUI::zapWallet()
   // 2=remove meta data needed to restore wallet transaction meta data after -zapwallettxes
   std::vector<CWalletTx> vWtx;
 
-
+  progressBarLabel->setText(tr("Zapping all transactions from wallet..."));
   splashMessage(_("Zapping all transactions from wallet..."));
   printf("Zapping all transactions from wallet...\n");
 
@@ -995,6 +998,7 @@ void BitcoinGUI::zapWallet()
   DBErrors nZapWalletRet = pwalletMain->ZapWalletTx(vWtx);
   if (nZapWalletRet != DB_LOAD_OK)
   {
+    progressBarLabel->setText(tr("Error loading wallet.dat: Wallet corrupted."));
     splashMessage(_("Error loading wallet.dat: Wallet corrupted"));
     printf("Error loading wallet.dat: Wallet corrupted\n");
     if (splashref)
@@ -1005,6 +1009,7 @@ void BitcoinGUI::zapWallet()
   delete pwalletMain;
   pwalletMain = NULL;
 
+  progressBarLabel->setText(tr("Loading wallet..."));
   splashMessage(_("Loading wallet..."));
   printf("Loading wallet...\n");
 
@@ -1018,21 +1023,25 @@ void BitcoinGUI::zapWallet()
   {
     if (nLoadWalletRet == DB_CORRUPT)
     {
-    splashMessage(_("Error loading wallet.dat: Wallet corrupted"));
+      progressBarLabel->setText(tr("Error loading wallet.dat: Wallet corrupted."));
+      splashMessage(_("Error loading wallet.dat: Wallet corrupted"));
       printf("Error loading wallet.dat: Wallet corrupted\n");
     }
     else if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
     {
       setStatusTip(tr("Warning: error reading wallet.dat! All keys read correctly, but transaction data or address book entries might be missing or incorrect."));
+      progressBarLabel->setText(tr("Warning - error reading wallet."));
       printf("Warning: error reading wallet.dat! All keys read correctly, but transaction data or address book entries might be missing or incorrect.\n");
     }
     else if (nLoadWalletRet == DB_TOO_NEW)
     {
+      progressBarLabel->setText(tr("Error loading wallet.dat: Please check for a newer version of BitBar."));
       setStatusTip(tr("Error loading wallet.dat: Wallet requires newer version of BitBar"));
       printf("Error loading wallet.dat: Wallet requires newer version of BitBar\n");
     }
     else if (nLoadWalletRet == DB_NEED_REWRITE)
     {
+  progressBarLabel->setText(tr("Wallet needs to be rewriten. Please restart BitBar to complete."));
       setStatusTip(tr("Wallet needed to be rewritten: restart BitBar to complete"));
       printf("Wallet needed to be rewritten: restart BitBar to complete\n");
       if (splashref)
@@ -1041,14 +1050,17 @@ void BitcoinGUI::zapWallet()
     }
     else
     {
+      progressBarLabel->setText(tr("Error laoding wallet.dat"));
       setStatusTip(tr("Error loading wallet.dat"));
       printf("Error loading wallet.dat\n");
     } 
   }
   
+  progressBarLabel->setText(tr("Wallet loaded..."));
   splashMessage(_("Wallet loaded..."));
   printf(" zap wallet  load     %15"PRI64d"ms\n", GetTimeMillis() - nStart);
 
+  progressBarLabel->setText(tr("Loading lables..."));
   splashMessage(_("Loaded lables..."));
   printf(" zap wallet  loading metadata\n");
 
@@ -1071,14 +1083,18 @@ void BitcoinGUI::zapWallet()
       copyTo->WriteToDisk();
     }
   }
+  progressBarLabel->setText(tr("Scanning for transactions..."));
   splashMessage(_("scanning for transactions..."));
   printf(" zap wallet  scanning for transactions\n");
 
   pwalletMain->ScanForWalletTransactions(pindexGenesisBlock, true);
   pwalletMain->ReacceptWalletTransactions();
+  progressBarLabel->setText(tr("Please restart your wallet."));
   splashMessage(_("Please restart your wallet."));
   printf(" zap wallet  done - please restart wallet.\n");
   sleep (10);
+  progressBarLabel->setText(tr(""));
+  progressBarLabel->setVisible(false);
 
 //  close splash screen
   if (splashref)
