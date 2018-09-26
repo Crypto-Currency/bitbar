@@ -239,7 +239,6 @@ std::string HelpMessage()
         "  -externalip=<ip>       " + _("Specify your own public address") + "\n" +
         "  -onlynet=<net>         " + _("Only connect to nodes in network <net> (IPv4, IPv6 or Tor)") + "\n" +
         "  -discover              " + _("Discover own IP address (default: 1 when listening and no -externalip)") + "\n" +
-        "  -irc                   " + _("Find peers using internet relay chat (default: 0)") + "\n" +
         "  -listen                " + _("Accept connections from outside (default: 1 if no -proxy or -connect)") + "\n" +
         "  -bind=<addr>           " + _("Bind to given address. Use [host]:port notation for IPv6") + "\n" +
         "  -dnsseed               " + _("Find peers using DNS lookup (default: 0)") + "\n" +
@@ -281,6 +280,7 @@ std::string HelpMessage()
         "  -keypool=<n>           " + _("Set key pool size to <n> (default: 100)") + "\n" +
         "  -rescan                " + _("Rescan the block chain for missing wallet transactions") + "\n" +
         "  -salvagewallet         " + _("Attempt to recover private keys from a corrupt wallet.dat") + "\n" +
+        "  -staking               " + _("turn staking off (default =1") + "\n" +
         "  -zapwallettxes         " + _("Delete all wallet transactions and only recover those parts of the blockchain through -rescan on startup") + "\n" +
         "  -checkblocks=<n>       " + _("How many blocks to check at startup (default: 2500, 0 = all)") + "\n" +
         "  -checklevel=<n>        " + _("How thorough the block verification is (0-6, default: 1)") + "\n" +
@@ -348,13 +348,10 @@ bool AppInit2()
 #endif
 
     // ********************************************************* Step 2: parameter interactions
-    SoftSetBoolArg("-irc", false);
     SoftSetBoolArg("-listen", true); // just making sure
 
     fTestNet = GetBoolArg("-testnet");
-    if (fTestNet) {
-        SoftSetBoolArg("-irc", false);
-    }
+    fStaking = GetBoolArg("-staking",true);
 
     if (mapArgs.count("-bind")) {
         // when specifying an explicit binding address, you want to listen on it
@@ -490,6 +487,18 @@ bool AppInit2()
         printf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
     printf("Used data directory %s\n", strDataDir.c_str());
+    //check for themes directory, and create if missing
+    if (!filesystem::exists(GetDataDir() / "themes"))
+    {
+      boost::filesystem::path temppath;
+      temppath = GetDataDir() / "themes";
+      filesystem::create_directory(temppath);
+      printf("created themes directory %s\n", temppath.string().c_str());
+      temppath = GetDataDir() / "themes/images";
+      filesystem::create_directory(temppath);
+      printf("created themes directory %s\n", temppath.string().c_str());
+    }
+
     std::ostringstream strErrors;
 
     if (fDaemon)

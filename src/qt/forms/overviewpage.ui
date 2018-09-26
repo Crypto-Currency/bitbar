@@ -16,9 +16,6 @@
   <property name="autoFillBackground">
    <bool>false</bool>
   </property>
-  <property name="styleSheet">
-   <string notr="true">QWidget{background-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0 rgba(255, 213,127, 206), stop:0.35 rgba(255, 213,127, 80), stop:0.4 rgba(255, 213,127, 80), stop:0.425 rgba(255, 213, 132, 156), stop:0.44 rgba(255, 233, 128, 80), stop:1 rgba(255, 255, 255, 0)); color yellow} QLabel{background-color:rgba(255,255,255,0)} QMenu{padding: 2px 10px 2px 10px;background-color:rgb(235,227,181);border:2px solid grey}</string>
-  </property>
   <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -94,9 +91,6 @@
           </property>
           <item row="0" column="0">
            <widget class="QLabel" name="label">
-            <property name="styleSheet">
-             <string notr="true"/>
-            </property>
             <property name="text">
              <string>Balance:</string>
             </property>
@@ -281,9 +275,6 @@
             <property name="cursor">
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
-            <property name="styleSheet">
-             <string notr="true">QToolTip{background-color:rgb(255,233,142); color:black; border:2px solid darkgrey;padding: 12px 20px 12px 20px} QPushButton{background-color:transparent}</string>
-            </property>
             <property name="text">
              <string/>
             </property>
@@ -388,10 +379,6 @@
         </item>
         <item>
          <widget class="QListView" name="listTransactions">
-          <property name="styleSheet">
-           <string notr="true">QMenu{background-color:rgb(255,233,142); color:black; border: 2px solid darkgrey};
-</string>
-          </property>
           <property name="frameShape">
            <enum>QFrame::NoFrame</enum>
           </property>

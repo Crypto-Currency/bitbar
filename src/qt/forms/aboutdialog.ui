@@ -13,9 +13,6 @@
   <property name="windowTitle">
    <string>About BitBar</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true">background-image: url(:/images/background); background-position: center;</string>
-  </property>
   <layout class="QHBoxLayout" name="horizontalLayout_2">
    <item>
     <widget class="QLabel" name="label_4">

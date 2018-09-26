@@ -2,9 +2,6 @@
 <ui version="4.0">
  <class>CoinControlDialog</class>
  <widget class="QDialog" name="CoinControlDialog">
-     <property name="styleSheet">
-      <string notr="true">QWidget{background-image: url(:/images/background); background-position: center} QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey; padding:2px 10px 2px 10px} QMenu{background-color:rgb(255,233,142); color:black; border: 2px solid grey; padding:2px 10px 2px 10px} QPushButton{background-color:rgb(255,233,142); color:black;border-style:outset; border-width:2px; border-color:darkgrey; border-radius:10px; padding:2px 10px 2px 10px}</string>
-     </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -24,11 +21,6 @@
   <property name="autoFillBackground">
    <bool>false</bool>
   </property>
-<!--
-  <property name="styleSheet">
-   <string notr="true">background-color: rgba(255, 213, 127,50);</string>
-  </property> 
--->
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayoutTop" stretch="0,0,0,0">

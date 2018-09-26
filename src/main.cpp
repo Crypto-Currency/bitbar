@@ -4481,7 +4481,7 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet)
         fGenerateBitcoins = false;
     fLimitProcessors = (nLimitProcessors != -1);
 
-    if (fGenerate)
+    if (fGenerate || fStaking)
     {
         int nProcessors = boost::thread::hardware_concurrency();
         printf("%d processors\n", nProcessors);

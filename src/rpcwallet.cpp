@@ -1740,6 +1740,37 @@ Value makekeypair(const Array& params, bool fHelp)
     return result;
 }
 
+Value setstaking(const Array& params, bool fHelp)
+{
+  if (fHelp || params.size() != 1)
+    throw runtime_error("staking  --- 1 to enable staking, 0 to disable");
+
+  int temp = params[0].get_int();
+
+  if(temp >1)
+    throw runtime_error("0 is off   1 is on\n");
+
+  Object result;
+  if(temp ==0)
+  {
+    fStaking=false;
+    if(!StopStakeMiner())
+      result.push_back(Pair("Error: counld not stop Stake Miner",false));
+    else
+      result.push_back(Pair("staking disabled", true));
+  }
+  if(temp ==1)
+  {
+    fStaking=true;
+    if(!StartStakeMiner())
+      result.push_back(Pair("Error: counld not start Stake Miner",false));
+    else
+      result.push_back(Pair("staking enabled", true));
+  }
+
+  return result;
+}
+
 // zapwallettxes
 Value zapwallettxes(const Array& params, bool fHelp)
 {
@@ -1788,13 +1819,13 @@ Value zapwallettxes(const Array& params, bool fHelp)
     }
     else if (nLoadWalletRet == DB_TOO_NEW)
     {
-      mess="Error loading wallet.dat: Wallet requires newer version of LitecoinPlus\n";
+      mess="Error loading wallet.dat: Wallet requires newer version of Bitbar\n";
       printf("%s",mess);
       return(mess);
     }
     else if (nLoadWalletRet == DB_NEED_REWRITE)
     {
-      mess="Wallet needed to be rewritten: restart LitecoinPlus to complete\n";
+      mess="Wallet needed to be rewritten: restart Bitbar to complete\n";
       printf("%s",mess);
       return(mess);
     }

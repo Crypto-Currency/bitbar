@@ -29,6 +29,7 @@
 #include "wallet.h"
 #include "bitcoinrpc.h"
 #include "version.h"
+#include "skinspage.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -87,7 +88,6 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 {
     resize(850, 550);
   setWindowTitle(tr("BitBar")+" - "+tr("Wallet")+" "+QString::fromStdString(CLIENT_BUILD));
-  setStyleSheet("QMainWindow{background-color:rgb(245,237,191)} QToolButton:!hover{background-color:rgb(255,233,142); color:black;border-style:outset; border-width:2px; border-color:darkgrey; border-radius:10px}  QToolButton:hover{background-color:rgb(255,213,132); color:black; border-style: outset; border-width: 2px; border-radius: 10px; border-color: darkgrey} QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey;}");
 #ifndef Q_OS_MAC
     qApp->setWindowIcon(QIcon(":icons/bitcoin"));
     setWindowIcon(QIcon(":icons/bitcoin"));
@@ -129,12 +129,18 @@ menuBar()->setNativeMenuBar(false);// menubar on form instead
 
     signVerifyMessageDialog = new SignVerifyMessageDialog(this);
 
+    skinsPage = new SkinsPage(this);
+    connect(skinsPage, SIGNAL(error(QString,QString,bool)), this, SLOT(error(QString,QString,bool)));
+    connect(skinsPage, SIGNAL(information(QString,QString)), this, SLOT(information(QString,QString)));
+    connect(skinsPage, SIGNAL(status(QString)), this, SLOT(status(QString)));
+
     centralWidget = new QStackedWidget(this);
     centralWidget->addWidget(overviewPage);
     centralWidget->addWidget(transactionsPage);
     centralWidget->addWidget(addressBookPage);
     centralWidget->addWidget(receiveCoinsPage);
     centralWidget->addWidget(sendCoinsPage);
+	centralWidget->addWidget(skinsPage);
     setCentralWidget(centralWidget);
 
     // Create status bar
@@ -183,16 +189,6 @@ menuBar()->setNativeMenuBar(false);// menubar on form instead
     progressBar->setAlignment(Qt::AlignCenter);
     progressBar->setVisible(false);
 
-    // Override style sheet for progress bar for styles that have a segmented progress bar,
-    // as they make the text unreadable (workaround for issue #1071)
-    // See https://qt-project.org/doc/qt-4.8/gallery.html
-    QString curStyle = qApp->style()->metaObject()->className();
-    if(curStyle == "QWindowsStyle" || curStyle == "QWindowsXPStyle")
-    {
-        progressBar->setStyleSheet("QProgressBar { background-color: #e8e8e8; border: 1px solid grey; border-radius: 7px; padding: 1px; text-align: center; } QProgressBar::chunk { background: QLinearGradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #FF8000, stop: 1 orange); border-radius: 7px; margin: 0px; }");
-    }
-
-    statusBar()->setStyleSheet("QStatusBar{background-color:rgb(245,237,191)}QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey;}");
     statusBar()->addWidget(progressBarLabel);
     statusBar()->addWidget(progressBar);
     statusBar()->addPermanentWidget(frameBlocks);
@@ -260,6 +256,12 @@ void BitcoinGUI::createActions()
     addressBookAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
     tabGroup->addAction(addressBookAction);
 
+    skinsPageAction = new QAction(QIcon(":/icons/gears"), tr("&Themes"), this);
+    skinsPageAction->setToolTip(tr("Change the look of your wallet"));
+    skinsPageAction->setCheckable(true);
+    skinsPageAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
+    tabGroup->addAction(skinsPageAction);
+
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -270,6 +272,8 @@ void BitcoinGUI::createActions()
     connect(historyAction, SIGNAL(triggered()), this, SLOT(gotoHistoryPage()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(gotoAddressBookPage()));
+    connect(skinsPageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(skinsPageAction, SIGNAL(triggered()), this, SLOT(gotoSkinsPage()));
 
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
     quitAction->setToolTip(tr("Quit application"));
@@ -382,7 +386,7 @@ void BitcoinGUI::createToolBars()
 
     QToolBar *toolbar2 = addToolBar(tr("Actions toolbar"));
     toolbar2->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    toolbar2->addAction(exportAction);
+	toolbar2->addAction(skinsPageAction);
 }
 
 void BitcoinGUI::setClientModel(ClientModel *clientModel)
@@ -650,6 +654,22 @@ void BitcoinGUI::error(const QString &title, const QString &message, bool modal)
     }
 }
 
+void BitcoinGUI::information(const QString &title, const QString &message)
+{
+    // Report information from network/worker thread
+    QMessageBox::information(this, title, message, QMessageBox::Ok, QMessageBox::Ok);
+}
+
+void BitcoinGUI::status(const QString &message)
+{
+	bool vis = true;
+	if (message == "") {
+		vis = false;
+	}
+	progressBarLabel->setText(message);
+	progressBarLabel->setVisible(vis);
+}
+
 void BitcoinGUI::changeEvent(QEvent *e)
 {
     QMainWindow::changeEvent(e);
@@ -759,6 +779,15 @@ void BitcoinGUI::gotoAddressBookPage()
     exportAction->setEnabled(true);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
     connect(exportAction, SIGNAL(triggered()), addressBookPage, SLOT(exportClicked()));
+}
+
+void BitcoinGUI::gotoSkinsPage()
+{
+    skinsPageAction->setChecked(true);
+    centralWidget->setCurrentWidget(skinsPage);
+
+    exportAction->setEnabled(false);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
 void BitcoinGUI::gotoReceiveCoinsPage()
@@ -1194,6 +1223,8 @@ void BitcoinGUI::updateMintingIcon()
         labelMintingIcon->setToolTip(tr("Not staking because you don't have mature coins."));
         labelMintingIcon->setEnabled(false);
     }
+    else if(!fStaking)
+       labelMintingIcon->setToolTip(tr("Staking is disabled"));
     else if (nLastCoinStakeSearchInterval)
     {
         uint64 nEstimateTime = nStakeTargetSpacing * nNetworkWeight / nWeight;

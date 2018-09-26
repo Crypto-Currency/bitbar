@@ -11,7 +11,7 @@
 const std::string CLIENT_NAME("BitBar");
 
 // Client version number
-#define CLIENT_VERSION_SUFFIX   "-release"
+#define CLIENT_VERSION_SUFFIX   "-beta"
 
 #define BUILD_DESC_FROM_UNKNOWN(maj,min,rev,build) \
     "v" DO_STRINGIZE(maj) "." DO_STRINGIZE(min) "." DO_STRINGIZE(rev) "." DO_STRINGIZE(build) ""
