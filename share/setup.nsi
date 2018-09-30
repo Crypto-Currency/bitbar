@@ -45,7 +45,7 @@ Var StartMenuGroup
 !insertmacro MUI_LANGUAGE English
 
 # Installer attributes
-OutFile BitBar-v0.7.6.1-win32-setup.exe
+OutFile BitBar-v0.7.6.2-win32-setup.exe
 InstallDir $PROGRAMFILES\BitBar
 CRCCheck on
 XPStyle on
