@@ -27,7 +27,7 @@ SendCoinsEntry::SendCoinsEntry(QWidget *parent) :
 #endif
 //ui->payAmount->StyleSheet("QComboBox{padding: 2px 10px 2px 10px;background-color:rgb(235,227,181);border:2px solid grey}");
 
-ui->payAmount->setStyleSheet("padding: 2px 25px 2px 2px;background-color:rgb(235,227,181);border:2px solid grey");
+//ui->payAmount->setStyleSheet("padding: 2px 25px 2px 2px;background-color:rgb(235,227,181);border:2px solid grey");
     setFocusPolicy(Qt::TabFocus);
     setFocusProxy(ui->payTo);
 
