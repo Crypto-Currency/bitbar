@@ -41,7 +41,6 @@ SkinsPage::SkinsPage(QWidget *parent) : QWidget(parent), ui(new Ui::SkinsPage)
   inipath=GetDataDir().string().c_str();
   inipath=inipath+"/themes/";
   loadSettings();
-  loadSkin();
 
   filesFoundLabel = new QLabel;
   statusLabel = new QLabel;
@@ -274,7 +273,7 @@ void SkinsPage::resizeEvent(QResizeEvent* event)
 void SkinsPage::getlist()
 {
   // show a downloading message in status bar
-  statusLabel->setText("<b>" + tr("Downloading themes from http://bitbar.rocks...") + "</b>");
+  statusLabel->setText("<b>" + tr("Downloading themes from https://bitbar.co...") + "</b>");
   latestNetError = "";
 
   // first, let's disable the download button (triple-clicks fanatics !)
@@ -288,8 +287,8 @@ void SkinsPage::getlist()
   connect(&manager,SIGNAL(finished(QNetworkReply*)),this,SLOT(getListFinished(QNetworkReply*)));
 
   QNetworkRequest request;
-  request.setUrl(QUrl("http://bitbar.rocks/themes/list.txt"));
-  request.setRawHeader("User-Agent", "Wallet theme request");
+  request.setUrl(QUrl("https://bitbar.co/themes/list.txt"));
+  request.setRawHeader("User-Agent", "Wallet BTB theme request");
 
   networkTimer->start();
   manager.get(request);
@@ -320,7 +319,7 @@ bool SkinsPage::netHandleError(QNetworkReply* reply, QString urlDownload)
 
 void SkinsPage::getListFinished(QNetworkReply* reply)
 {
-  if (netHandleError(reply, "http://bigem.co/themes/list.txt")) {
+  if (netHandleError(reply, "https://bitbar.co/themes/list.txt")) {
     disconnect(&manager, SIGNAL(finished(QNetworkReply*)), 0, 0);  
     connect(&manager, SIGNAL(finished(QNetworkReply*)), SLOT(downloadFinished(QNetworkReply*)));
     QString pagelist=reply->readAll();
@@ -334,7 +333,7 @@ void SkinsPage::getListFinished(QNetworkReply* reply)
       line.replace("\r",""); // this one too
       if(line.length())
       {  
-        download("http://bitbar.rocks/themes/"+line);
+        download("https://bitbar.co/themes/"+line);
       } 
     }
   }
@@ -348,7 +347,7 @@ void SkinsPage::download(const QUrl &filename)
 {
   QNetworkRequest request;//(filename);
   request.setUrl(filename);
-  request.setRawHeader("User-Agent", "Wallet theme request");
+  request.setRawHeader("User-Agent", "Wallet BTB theme request");
   networkTimer->start();
   reply = manager.get(request);
   currentDownloads.append(reply);

@@ -49,6 +49,7 @@ public:
         functionality.
     */
     void setWalletModel(WalletModel *walletModel);
+    void loadSkin();
 
 protected:
     void changeEvent(QEvent *e);
@@ -84,6 +85,7 @@ private:
     QAction *sendCoinsAction;
     QAction *addressBookAction;
     QAction *skinsPageAction;
+    QAction* openConfigAction;
     QAction *signMessageAction;
     QAction *verifyMessageAction;
     QAction *aboutAction;
@@ -121,9 +123,10 @@ private:
     /** Create system tray (notification) icon */
     void createTrayIcon();
 
-  void splashMessage(const std::string &message);
 
 public slots:
+    void splashMessage(const std::string &message, bool quickSleep = false);
+
     /** Set number of connections shown in the UI */
     void setNumConnections(int count);
     /** Set number of blocks shown in the UI */
@@ -158,6 +161,8 @@ private slots:
     void gotoAddressBookPage();
     /** Switch to skins page */
     void gotoSkinsPage();
+    // Open bitbar.conf
+    void openConfig();
     /** Switch to receive coins page */
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */

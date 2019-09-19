@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/icons">
+        <file alias="bitcoin">res/icons/bitbar-128.png</file>
         <file alias="address-book">res/icons/address-book.png</file>
         <file alias="quit">res/icons/quit.png</file>
         <file alias="send">res/icons/send.png</file>
@@ -51,9 +52,12 @@
         <file alias="comicb">res/fonts/comicbd.ttf</file>
     </qresource>
     <qresource prefix="/images">
-        <file alias="background">res/images/bitbar-background.jpg</file>
+        <file alias="startup1">res/images/splash1.png</file>
+        <file alias="startup2">res/images/splash2.png</file>
+        <file alias="startup3">res/images/splash3.png</file>
+        <file alias="startup4">res/images/splash4.png</file>
+	<file alias="background">res/images/background.jpg</file>
         <file alias="about">res/images/about.png</file>
-        <file alias="splash">res/images/NewSplash.png</file>
     </qresource>
     <qresource prefix="/movies">
         <file alias="update_spinner">res/movies/update_spinner.mng</file>
