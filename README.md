@@ -18,4 +18,5 @@ or at:[Bitbar.co](http://bitbar.co) and click the status tab
 ###  please check website for downloads
 <br>
 ###  Bitbar Web Site [bitbar.co](http://bitbar.co/)
+<br>
 ###  BTB Information Thread [bitcointalk.org](https://bitcointalk.org/index.php?topic=196125.0)
