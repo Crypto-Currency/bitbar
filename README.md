@@ -15,13 +15,7 @@ or at:[Bitbar.co](http://bitbar.co) and click the status tab
 <br>
 <br>
 <br>
-### Current zip Releases:<br>
-*  Windows  QT [v.0.7.5.1](https://drive.google.com/open?id=0B1cnD3W8c0jtUVZKMnhYN01YVHM)<br>
-bootstrap, and macOS version can be found there also.
+###  please check website for downloads
 <br>
-<br>
-<br>
-
-
 ###  Bitbar Web Site [bitbar.co](http://bitbar.co/)
 ###  BTB Information Thread [bitcointalk.org](https://bitcointalk.org/index.php?topic=196125.0)
