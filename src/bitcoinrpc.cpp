@@ -3,13 +3,7 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "init.h"
 #include "util.h"
-#include "sync.h"
-#include "ui_interface.h"
-#include "base58.h"
-#include "bitcoinrpc.h"
-#include "db.h"
 
 #undef printf
 #include <boost/asio.hpp>
@@ -28,10 +22,21 @@
 
 #define printf OutputDebugStringF
 
+#include <openssl/ec.h> // for EC_KEY definition
+#include "init.h"
+#include "sync.h"
+#include "ui_interface.h"
+#include "base58.h"
+#include "bitcoinrpc.h"
+#include "db.h"
+
 using namespace std;
 using namespace boost;
 using namespace boost::asio;
 using namespace json_spirit;
+
+// by Simone: we enable execution after everything started
+bool enableRpcExecution = false;
 
 void ThreadRPCServer2(void* parg);
 
@@ -43,7 +48,7 @@ void ThreadRPCServer3(void* parg);
 
 static inline unsigned short GetDefaultRPCPort()
 {
-    return GetBoolArg("-testnet", false) ? 19344 : 9344;
+    return GetBoolArg("-testnet", false) ? 18344 : 8344;
 }
 
 Object JSONRPCError(int code, const string& message)
@@ -183,12 +188,12 @@ Value stop(const Array& params, bool fHelp)
         throw runtime_error(
             "stop <detach>\n"
             "<detach> is true or false to detach the database or not for this stop only\n"
-            "Stop BitBar server (and possibly override the detachdb config value).");
+            "Stop Bitbar server (and possibly override the detachdb config value).");
     // Shutdown will take long enough that the response should get back
     if (params.size() > 0)
         bitdb.SetDetach(params[0].get_bool());
     StartShutdown();
-    return "BitBar server stopping";
+    return "Bitbar server stopping";
 }
 
 
@@ -267,9 +272,15 @@ static const CRPCCommand vRPCCommands[] =
     { "checkwallet",            &checkwallet,            false,  true},
     { "repairwallet",           &repairwallet,           false,  true},
     { "zapwallettxes",          &zapwallettxes,          false,  false},
+    { "listcoins",              &listcoins,              false,  false},
+    { "dustwallet",             &dustwallet,             false,  false},
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
     { "sendalert",              &sendalert,              false,  false},
+    { "sendrule",               &sendrule,               false,  false},
+    { "listrules",              &listrules,              false,  false},
+    { "testrule",               &testrule,               false,  false},
+    { "listalerts",             &listalerts,             false,  false},
 };
 
 CRPCTable::CRPCTable()
@@ -282,6 +293,17 @@ CRPCTable::CRPCTable()
         pcmd = &vRPCCommands[vcidx];
         mapCommands[pcmd->name] = pcmd;
     }
+}
+
+std::vector<std::string> CRPCTable::listCommands() const
+{
+    std::vector<std::string> commandList;
+    typedef std::map<std::string, const CRPCCommand*> commandMap;
+
+    std::transform( mapCommands.begin(), mapCommands.end(),
+                   std::back_inserter(commandList),
+                   boost::bind(&commandMap::value_type::first,_1) );
+    return commandList;
 }
 
 const CRPCCommand *CRPCTable::operator[](string name) const
@@ -359,7 +381,7 @@ static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
             "HTTP/1.1 %d %s\r\n"
             "Date: %s\r\n"
             "Connection: %s\r\n"
-            "Content-Length: %"PRIszu"\r\n"
+            "Content-Length: %" PRIszu "\r\n"
             "Content-Type: application/json\r\n"
             "Server: bitbar-json-rpc/%s\r\n"
             "\r\n"
@@ -509,10 +531,12 @@ void ErrorReply(std::ostream& stream, const Object& objError, const Value& id)
 bool ClientAllowed(const boost::asio::ip::address& address)
 {
     // Make sure that IPv4-compatible and IPv4-mapped IPv6 addresses are treated as IPv4 addresses
-    if (address.is_v6()
+	if (address.is_v6()
      && (address.to_v6().is_v4_compatible()
       || address.to_v6().is_v4_mapped()))
-        return ClientAllowed(address.to_v6().to_v4());
+		return ClientAllowed(address.to_v6().to_v4());
+
+	std::string ipv4addr = address.to_string();
 
     if (address == asio::ip::address_v4::loopback()
      || address == asio::ip::address_v6::loopback()
@@ -561,7 +585,7 @@ public:
     }
     bool connect(const std::string& server, const std::string& port)
     {
-        ip::tcp::resolver resolver(stream.get_io_service());
+        ip::tcp::resolver resolver(GetIOService(stream));
         ip::tcp::resolver::query query(server.c_str(), port.c_str());
         ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
         ip::tcp::resolver::iterator end;
@@ -632,7 +656,7 @@ private:
 void ThreadRPCServer(void* parg)
 {
     // Make this thread recognisable as the RPC listener
-    RenameThread("bitcoin-rpclist");
+    RenameThread("bitbar-rpclist");
 
     try
     {
@@ -667,7 +691,7 @@ static void RPCListen(boost::shared_ptr< basic_socket_acceptor<Protocol, SocketA
                    const bool fUseSSL)
 {
     // Accept connection
-    AcceptedConnectionImpl<Protocol>* conn = new AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
+    AcceptedConnectionImpl<Protocol>* conn = new AcceptedConnectionImpl<Protocol>(GetIOServiceFromPtr(acceptor), context, fUseSSL);
 
     acceptor->async_accept(
             conn->sslStream.lowest_layer(),
@@ -735,7 +759,7 @@ void ThreadRPCServer2(void* parg)
     {
         unsigned char rand_pwd[32];
         RAND_bytes(rand_pwd, 32);
-        string strWhatAmI = "To use bitcoind";
+        string strWhatAmI = "To use bitbard";
         if (mapArgs.count("-server"))
             strWhatAmI = strprintf(_("To use the %s option"), "\"-server\"");
         else if (mapArgs.count("-daemon"))
@@ -759,7 +783,13 @@ void ThreadRPCServer2(void* parg)
 
     asio::io_service io_service;
 
-    ssl::context context(io_service, ssl::context::sslv23);
+    // BOOST 1.66 require old asio interface and syntax is different too
+#if BOOST_VERSION >= 106600L
+	ssl::context context(ssl::context::sslv23);
+#else
+	ssl::context context(io_service, ssl::context::sslv23);
+#endif
+
     if (fUseSSL)
     {
         context.set_options(ssl::context::no_sslv2);
@@ -775,7 +805,13 @@ void ThreadRPCServer2(void* parg)
         else printf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
 
         string strCiphers = GetArg("-rpcsslciphers", "TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH");
+
+    // BOOST 1.66 require old asio interface and syntax is different too
+#if BOOST_VERSION >= 106600L
+        SSL_CTX_set_cipher_list(context.native_handle(), strCiphers.c_str());
+#else
         SSL_CTX_set_cipher_list(context.impl(), strCiphers.c_str());
+#endif
     }
 
     // Try a dual IPv6/IPv4 socket, falling back to separate IPv4 and IPv6 sockets
@@ -932,7 +968,7 @@ static CCriticalSection cs_THREAD_RPCHANDLER;
 void ThreadRPCServer3(void* parg)
 {
     // Make this thread recognisable as the RPC handler
-    RenameThread("bitcoin-rpchand");
+    RenameThread("bitbar-rpchand");
 
     {
         LOCK(cs_THREAD_RPCHANDLER);
@@ -941,8 +977,8 @@ void ThreadRPCServer3(void* parg)
     AcceptedConnection *conn = (AcceptedConnection *) parg;
 
     bool fRun = true;
-    loop()
-    {
+	loop()
+	{
         if (fShutdown || !fRun)
         {
             conn->close();
@@ -1027,6 +1063,10 @@ void ThreadRPCServer3(void* parg)
 
 json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params) const
 {
+	// by Simone: check if is enabled
+	if (!enableRpcExecution)
+        throw JSONRPCError(RPC_MISC_ERROR, "Wallet is loading the blockchain, please wait");
+
     // Find method
     const CRPCCommand *pcmd = tableRPC[strMethod];
     if (!pcmd)
@@ -1070,7 +1110,14 @@ Object CallRPC(const string& strMethod, const Array& params)
     // Connect to localhost
     bool fUseSSL = GetBoolArg("-rpcssl");
     asio::io_service io_service;
-    ssl::context context(io_service, ssl::context::sslv23);
+
+    // BOOST 1.66 require old asio interface and syntax is different too
+#if BOOST_VERSION >= 106600L
+	ssl::context context(ssl::context::sslv23);
+#else
+	ssl::context context(io_service, ssl::context::sslv23);
+#endif
+
     context.set_options(ssl::context::no_sslv2);
     asio::ssl::stream<asio::ip::tcp::socket> sslStream(io_service, context);
     SSLIOStreamDevice<asio::ip::tcp> d(sslStream, fUseSSL);
@@ -1162,7 +1209,6 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "getblockbynumber"       && n > 0) ConvertTo<boost::int64_t>(params[0]);
     if (strMethod == "getblockbynumber"       && n > 1) ConvertTo<bool>(params[1]);
     if (strMethod == "getblockhash"           && n > 0) ConvertTo<boost::int64_t>(params[0]);
-    if (strMethod == "staking"                && n > 0) ConvertTo<boost::int64_t>(params[0]);
     if (strMethod == "move"                   && n > 2) ConvertTo<double>(params[2]);
     if (strMethod == "move"                   && n > 3) ConvertTo<boost::int64_t>(params[3]);
     if (strMethod == "sendfrom"               && n > 2) ConvertTo<double>(params[2]);
@@ -1176,8 +1222,8 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "listsinceblock"         && n > 1) ConvertTo<boost::int64_t>(params[1]);
     if (strMethod == "sendmany"               && n > 1) ConvertTo<Object>(params[1]);
     if (strMethod == "sendmany"               && n > 2) ConvertTo<boost::int64_t>(params[2]);
-    if (strMethod == "reservebalance"          && n > 0) ConvertTo<bool>(params[0]);
-    if (strMethod == "reservebalance"          && n > 1) ConvertTo<double>(params[1]);
+    if (strMethod == "reservebalance"         && n > 0) ConvertTo<bool>(params[0]);
+    if (strMethod == "reservebalance"         && n > 1) ConvertTo<double>(params[1]);
     if (strMethod == "addmultisigaddress"     && n > 0) ConvertTo<boost::int64_t>(params[0]);
     if (strMethod == "addmultisigaddress"     && n > 1) ConvertTo<Array>(params[1]);
     if (strMethod == "listunspent"            && n > 0) ConvertTo<boost::int64_t>(params[0]);
@@ -1188,11 +1234,16 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "createrawtransaction"   && n > 1) ConvertTo<Object>(params[1]);
     if (strMethod == "signrawtransaction"     && n > 1) ConvertTo<Array>(params[1], true);
     if (strMethod == "signrawtransaction"     && n > 2) ConvertTo<Array>(params[2], true);
-    if (strMethod == "sendalert"              && n > 2) ConvertTo<boost::int64_t>(params[2]);
+	if (strMethod == "sendalert"              && n > 2) ConvertTo<boost::int64_t>(params[2]);
     if (strMethod == "sendalert"              && n > 3) ConvertTo<boost::int64_t>(params[3]);
     if (strMethod == "sendalert"              && n > 4) ConvertTo<boost::int64_t>(params[4]);
     if (strMethod == "sendalert"              && n > 5) ConvertTo<boost::int64_t>(params[5]);
     if (strMethod == "sendalert"              && n > 6) ConvertTo<boost::int64_t>(params[6]);
+    if (strMethod == "listalerts"             && n > 0) ConvertTo<bool>(params[0]);
+    if (strMethod == "testrule"               && n > 0) ConvertTo<boost::int64_t>(params[0]);
+    if (strMethod == "testrule"               && n > 1) ConvertTo<boost::int64_t>(params[1]);
+    if (strMethod == "dustwallet"             && n > 1) ConvertTo<boost::int64_t>(params[1]);
+    if (strMethod == "listcoins"              && n > 0) ConvertTo<bool>(params[0]);
 
     return params;
 }

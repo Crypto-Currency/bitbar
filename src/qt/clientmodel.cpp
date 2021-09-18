@@ -1,4 +1,6 @@
 #include "clientmodel.h"
+#include "bantablemodel.h"
+#include "peertablemodel.h"
 #include "guiconstants.h"
 #include "optionsmodel.h"
 #include "addresstablemodel.h"
@@ -12,13 +14,16 @@
 #include <QTimer>
 
 static const int64 nClientStartupTime = GetTime();
+double GetPoSKernelPS(const CBlockIndex* blockindex = NULL);
 
 ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
-    QObject(parent), optionsModel(optionsModel),
+    QObject(parent), optionsModel(optionsModel), banTableModel(0), peerTableModel(0),
     cachedNumBlocks(0), cachedNumBlocksOfPeers(0), pollTimer(0)
 {
     numBlocksAtStartup = -1;
 
+    banTableModel = new BanTableModel(this);
+    peerTableModel = new PeerTableModel(this);
     pollTimer = new QTimer(this);
     pollTimer->setInterval(MODEL_UPDATE_DELAY);
     pollTimer->start();
@@ -32,6 +37,26 @@ ClientModel::~ClientModel()
     unsubscribeFromCoreSignals();
 }
 
+PeerTableModel *ClientModel::getPeerTableModel()
+{
+    return peerTableModel;
+}
+
+BanTableModel *ClientModel::getBanTableModel()
+{
+    return banTableModel;
+}
+
+double ClientModel::getPosKernalPS()
+{
+    return GetPoSKernelPS();
+}
+
+int ClientModel::getStakeTargetSpacing()
+{
+    return nStakeTargetSpacing;
+}
+
 int ClientModel::getNumConnections() const
 {
     return vNodes.size();
@@ -40,6 +65,16 @@ int ClientModel::getNumConnections() const
 int ClientModel::getNumBlocks() const
 {
     return nBestHeight;
+}
+
+quint64 ClientModel::getTotalBytesRecv() const
+{
+    return CNode::GetTotalBytesRecv();
+}
+
+quint64 ClientModel::getTotalBytesSent() const
+{
+    return CNode::GetTotalBytesSent();
 }
 
 int ClientModel::getNumBlocksAtStartup()
@@ -64,9 +99,9 @@ void ClientModel::updateTimer()
     {
         cachedNumBlocks = newNumBlocks;
         cachedNumBlocksOfPeers = newNumBlocksOfPeers;
-
         emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);
     }
+    Q_EMIT bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
 }
 
 void ClientModel::updateNumConnections(int numConnections)
@@ -91,6 +126,32 @@ void ClientModel::updateAlert(const QString &hash, int status)
     // Emit a numBlocksChanged when the status message changes,
     // so that the view recomputes and updates the status bar.
     emit numBlocksChanged(getNumBlocks(), getNumBlocksOfPeers());
+}
+
+double ClientModel::GetDifficulty() const
+{
+    // Floating point number that is a multiple of the minimum difficulty,
+    // minimum difficulty = 1.0.
+
+    if (pindexBest == NULL)
+        return 1.0;
+    int nShift = (pindexBest->nBits >> 24) & 0xff;
+
+    double dDiff =
+        (double)0x0000ffff / (double)(pindexBest->nBits & 0x00ffffff);
+
+    while (nShift < 29)
+    {
+        dDiff *= 256.0;
+        nShift++;
+    }
+    while (nShift > 29)
+    {
+        dDiff /= 256.0;
+        nShift--;
+    }
+
+    return dDiff;
 }
 
 bool ClientModel::isTestNet() const
@@ -164,14 +225,25 @@ void ClientModel::subscribeToCoreSignals()
 {
     // Connect signals to client
     uiInterface.NotifyBlocksChanged.connect(boost::bind(NotifyBlocksChanged, this));
+#if BOOST_VERSION >= 107300
+    uiInterface.NotifyNumConnectionsChanged.connect(boost::bind(NotifyNumConnectionsChanged, this, boost::placeholders::_1));
+    uiInterface.NotifyAlertChanged.connect(boost::bind(NotifyAlertChanged, this, boost::placeholders::_1, boost::placeholders::_2));
+#else
     uiInterface.NotifyNumConnectionsChanged.connect(boost::bind(NotifyNumConnectionsChanged, this, _1));
     uiInterface.NotifyAlertChanged.connect(boost::bind(NotifyAlertChanged, this, _1, _2));
+#endif
 }
 
 void ClientModel::unsubscribeFromCoreSignals()
 {
     // Disconnect signals from client
     uiInterface.NotifyBlocksChanged.disconnect(boost::bind(NotifyBlocksChanged, this));
+#if BOOST_VERSION >= 107300
+    uiInterface.NotifyNumConnectionsChanged.disconnect(boost::bind(NotifyNumConnectionsChanged, this, boost::placeholders::_1));
+    uiInterface.NotifyAlertChanged.disconnect(boost::bind(NotifyAlertChanged, this, boost::placeholders::_1, boost::placeholders::_2));
+#else
     uiInterface.NotifyNumConnectionsChanged.disconnect(boost::bind(NotifyNumConnectionsChanged, this, _1));
     uiInterface.NotifyAlertChanged.disconnect(boost::bind(NotifyAlertChanged, this, _1, _2));
+#endif
 }
+

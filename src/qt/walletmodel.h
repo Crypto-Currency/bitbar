@@ -4,7 +4,6 @@
 #include <QObject>
 #include <vector>
 #include <map>
-
 #include "allocators.h" /* for SecureString */
 
 class OptionsModel;
@@ -49,7 +48,8 @@ public:
         DuplicateAddress,
         TransactionCreationFailed, // Error returned when wallet is still locked
         TransactionCommitFailed,
-        Aborted
+        Aborted,
+		SendingSuspended
     };
 
     enum EncryptionStatus
@@ -101,6 +101,8 @@ public:
 
     //PoS Information about value and time
     void getStakeWeightFromValue(const qint64& nTime, const qint64& nValue, quint64& nWeight);
+    //PoS Information
+    void getStakeWeight(quint64& nMinWeight, quint64& nMaxWeight, quint64& nWeight);
 
 
     // RAI object for unlocking wallet, returned by requestUnlock()
@@ -124,11 +126,13 @@ public:
     };
 
     UnlockContext requestUnlock();
-
 	bool getPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const;
 	void getOutputs(const std::vector<COutPoint>& vOutpoints, std::vector<COutput>& vOutputs);
 	void listCoins(std::map<QString, std::vector<COutput> >& mapCoins) const;
-
+    bool isLockedCoin(uint256 hash, unsigned int n) const;
+    void lockCoin(COutPoint& output);
+    void unlockCoin(COutPoint& output);
+    void listLockedCoins(std::vector<COutPoint>& vOutpts);
 private:
     CWallet *wallet;
 
@@ -154,7 +158,6 @@ private:
     void unsubscribeFromCoreSignals();
     void checkBalanceChanged();
 
-
 public slots:
     /* Wallet status might have changed */
     void updateStatus();
@@ -172,6 +175,7 @@ signals:
 
     // Number of transactions in wallet changed
     void numTransactionsChanged(int count);
+    void numHeightChanged(int count);
 
     // Encryption status of wallet changed
     void encryptionStatusChanged(int status);

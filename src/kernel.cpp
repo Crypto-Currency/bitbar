@@ -10,7 +10,7 @@
 using namespace std;
 
 extern int nStakeMaxAge;
-extern int nStakeTargetSpacing;
+extern unsigned int nStakeTargetSpacing;
 
 // Modifier interval: time to elapse before new modifier is computed
 // Set to 6-hour for production network and 20-minute for test network
@@ -312,9 +312,16 @@ bool CheckStakeKernelHash(unsigned int nBits, const CBlock& blockFrom, unsigned 
     }
 
     // Now check if proof-of-stake hash meets target protocol
+    if (fDebug)
+    {
+      printf(">>> bnCoinDayWeight = %s, bnTargetPerCoinDay=%s\n", 
+bnCoinDayWeight.ToString().c_str(), bnTargetPerCoinDay.ToString().c_str()); 
+//printf(">>> CheckStakeKernelHash - hashProofOfStake too much\n");
+    }
     if (CBigNum(hashProofOfStake) > bnCoinDayWeight * bnTargetPerCoinDay)
         return false;
-    if (fDebug && !fPrintProofOfStake)
+
+    if (fDebug)
     {
         printf("CheckStakeKernelHash() : using modifier 0x%016 "PRI64x" at height=%d timestamp=%s for block from height=%d timestamp=%s\n",
             nStakeModifier, nStakeModifierHeight, 

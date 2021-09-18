@@ -5,20 +5,27 @@
 #include <boost/foreach.hpp>
 #include <map>
 
-#include "alert.h"
+#include <openssl/ec.h> // for EC_KEY definition
+
 #include "key.h"
 #include "net.h"
 #include "sync.h"
 #include "ui_interface.h"
+#include "alert.h"
+#include "rules.h"
 
 using namespace std;
 
-map<uint256, CAlert> mapAlerts;
+std::map<uint256, CAlert> mapAlerts;
 CCriticalSection cs_mapAlerts;
+
+// by Simone: added a map that is ordered by ID... not by HASH ! much more useful for display
+std::map<int, CAlert> mapAlertsById;
 
 static const char* pszMainKey = "04c99936721e11128cb93b51dc35e1b1103477726f1c010a62ca2cb78baf42df787df4e4d4de789b39febda0f58da14d250f89d2cf81a6582c241bff69f32b8059"; 
 // TestNet alerts pubKey
 static const char* pszTestKey = "04c99936721e11128cb93b51dc35e1b1103477726f1c010a62ca2cb78baf42df787df4e4d4de789b39febda0f58da14d250f89d2cf81a6582c241bff69f32b8059"; 
+
 void CUnsignedAlert::SetNull()
 {
     nVersion = 1;
@@ -31,6 +38,7 @@ void CUnsignedAlert::SetNull()
     nMaxVer = 0;
     setSubVer.clear();
     nPriority = 0;
+    nPermanent = false;
 
     strComment.clear();
     strStatusBar.clear();
@@ -48,8 +56,8 @@ std::string CUnsignedAlert::ToString() const
     return strprintf(
         "CAlert(\n"
         "    nVersion     = %d\n"
-        "    nRelayUntil  = % " PRI64d"\n"
-        "    nExpiration  = % " PRI64d"\n"
+        "    nRelayUntil  = %" PRI64d "\n"
+        "    nExpiration  = %" PRI64d "\n"
         "    nID          = %d\n"
         "    nCancel      = %d\n"
         "    setCancel    = %s\n"
@@ -98,22 +106,39 @@ uint256 CAlert::GetHash() const
 
 bool CAlert::IsInEffect() const
 {
-    return (GetAdjustedTime() < nExpiration);
+	// by Simone: if permanent, always return true, always in effect
+    return (nPermanent ? nPermanent : (GetAdjustedTime() < nExpiration));
 }
 
 bool CAlert::Cancels(const CAlert& alert) const
 {
-    if (!IsInEffect())
-        return false; // this was a no-op before 31403
+	if (!IsInEffect())
+	{
+		return false;		// this was a no-op before 31403
+	}
+	if (alert.nPermanent)
+		return false;		// this type never cancels
     return (alert.nID <= nCancel || setCancel.count(alert.nID));
 }
 
 bool CAlert::AppliesTo(int nVersion, std::string strSubVerIn) const
 {
     // TODO: rework for client-version-embedded-in-strSubVer ?
-    return (IsInEffect() &&
-            nMinVer <= nVersion && nVersion <= nMaxVer &&
-            (setSubVer.empty() || setSubVer.count(strSubVerIn)));
+	if (IsInEffect())
+	{
+		if ((nMinVer >= CONTROL_PROTOCOL_VERSION) && (nPriority == 999))
+		{
+			CRules::insert(*this);
+			printf("alert/rule %d has been added by dedicated message\n", nID);
+			return false;			// when rule protocol was introduced, priority 999 is a rule message, doesn't apply as alert, ever
+		}
+		else
+		{
+			return (nMinVer <= nVersion && nVersion <= nMaxVer &&
+				    (setSubVer.empty() || setSubVer.count(strSubVerIn)));
+		}
+	}
+	return false;
 }
 
 bool CAlert::AppliesToMe() const
@@ -130,6 +155,7 @@ bool CAlert::RelayTo(CNode* pnode) const
     {
         if (AppliesTo(pnode->nVersion, pnode->strSubVer) ||
             AppliesToMe() ||
+			nPermanent ||						// by Simone: if this flag is raised, just push this to everyone, always, forever
             GetAdjustedTime() < nRelayUntil)
         {
             pnode->PushMessage("alert", *this);
@@ -200,16 +226,23 @@ bool CAlert::ProcessAlert()
         for (map<uint256, CAlert>::iterator mi = mapAlerts.begin(); mi != mapAlerts.end();)
         {
             const CAlert& alert = (*mi).second;
-            if (Cancels(alert))
+			if (nID == alert.nID)
+			{
+                printf("alert %d already exist in queue , skipping\n", alert.nID);
+                return false;
+			}
+            else if (Cancels(alert))
             {
                 printf("cancelling alert %d\n", alert.nID);
                 uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
+				mapAlertsById.erase(alert.nID);
                 mapAlerts.erase(mi++);
             }
             else if (!alert.IsInEffect())
             {
                 printf("expiring alert %d\n", alert.nID);
                 uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
+				mapAlertsById.erase(alert.nID);
                 mapAlerts.erase(mi++);
             }
             else
@@ -227,8 +260,10 @@ bool CAlert::ProcessAlert()
             }
         }
 
-        // Add to mapAlerts
+        // Add to mapAlerts (and remember when it was raised first)
+		nReceivedOn = GetTime();
         mapAlerts.insert(make_pair(GetHash(), *this));
+        mapAlertsById.insert(make_pair(nID, *this));
         // Notify UI if it applies to me
         if(AppliesToMe())
             uiInterface.NotifyAlertChanged(GetHash(), CT_NEW);
@@ -237,3 +272,83 @@ bool CAlert::ProcessAlert()
     printf("accepted alert %d, AppliesToMe()=%d\n", nID, AppliesToMe());
     return true;
 }
+
+// by Simone: returns the next available free ID to raise a new alert
+int CAlert::getNextID()
+{
+    {
+        LOCK(cs_mapAlerts);
+
+	// when there is nothing inside, the first ID is available
+		if (mapAlertsById.size() == 0)
+		{
+			return 1;
+		}
+
+	// just loop and find an available ID
+		int i = 1;
+		loop()
+		{
+
+		// let's check we don't overflow max int value, and return an invalid ID
+			if (i == std::numeric_limits<int>::max())
+			{
+				return -1;
+			}
+
+		// if this ID is unused, then it can be used
+			if (mapAlertsById.find(i) == mapAlertsById.end())
+			{
+				return i;
+			}
+			i++;
+		}
+	}
+}
+
+void CAlert::ProcessAlerts()
+{
+    {
+        LOCK(cs_mapAlerts);
+        for (map<uint256, CAlert>::iterator mi = mapAlerts.begin(); mi != mapAlerts.end();)
+        {
+            const CAlert& alert = (*mi).second;
+			if (!alert.IsInEffect())
+            {
+                printf("expiring alert %d\n", alert.nID);
+                uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
+				mapAlertsById.erase(alert.nID);
+                mapAlerts.erase(mi++);
+            }
+            else
+                mi++;
+        }
+	}
+}
+
+
+bool CAlert::isInfo(int priority)
+{
+	return (priority <= 300);
+}
+
+bool CAlert::isWarning(int priority)
+{
+	return (priority <= 600);
+}
+
+bool CAlert::isCritical(int priority)
+{
+	return ((priority > 600) && (priority < 999));
+}
+
+bool CAlert::isSuperCritical(int priority)
+{
+	return (priority >= 1000);
+}
+
+bool CAlert::isRule(int priority)
+{
+	return (priority == 999);
+}
+

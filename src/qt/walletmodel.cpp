@@ -80,6 +80,7 @@ void WalletModel::pollBalanceChanged()
     {
         // Balance and number of transactions might have changed
         cachedNumBlocks = nBestHeight;
+        emit numHeightChanged(cachedNumBlocks);
         checkBalanceChanged();
     }
 }
@@ -331,6 +332,11 @@ void WalletModel::repairWallet(int& nMismatchSpent, int64& nBalanceInQuestion, i
 void WalletModel::getStakeWeightFromValue(const int64& nTime, const int64& nValue, uint64& nWeight)
 {
     wallet->GetStakeWeightFromValue(nTime, nValue, nWeight);
+}
+
+void WalletModel::getStakeWeight(uint64& nMinWeight, uint64& nMaxWeight, uint64& nWeight )
+{
+    wallet->GetStakeWeight(*wallet, nMinWeight, nMaxWeight, nWeight);
 }
 
 // Handlers for core signals

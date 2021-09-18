@@ -9,7 +9,6 @@
 #include <string>
 #include <list>
 #include <map>
-#include "wallet.h"
 
 class CBlockIndex;
 
@@ -17,8 +16,26 @@ class CBlockIndex;
 #include "json/json_spirit_writer_template.h"
 #include "json/json_spirit_utils.h"
 
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
+
 #include "util.h"
 #include "checkpoints.h"
+
+// by Simone: we enable execution after everything started
+extern bool enableRpcExecution;
+
+ // Boost Support for 1.70+
+#if BOOST_VERSION >= 107000
+    #define GetIOService(s) ((boost::asio::io_context&)(s).get_executor().context())
+    #define GetIOServiceFromPtr(s) ((boost::asio::io_context&)(s->get_executor().context())) // this one
+    typedef boost::asio::io_context ioContext;
+
+#else
+    #define GetIOService(s) ((s).get_io_service())
+    #define GetIOServiceFromPtr(s) ((s)->get_io_service())
+    typedef boost::asio::io_service ioContext;
+#endif
 
 // HTTP status codes
 enum HTTPStatusCode
@@ -109,6 +126,7 @@ private:
     std::map<std::string, const CRPCCommand*> mapCommands;
 public:
     CRPCTable();
+	std::vector<std::string> listCommands() const;
     const CRPCCommand* operator[](std::string name) const;
     std::string help(std::string name) const;
 
@@ -141,6 +159,11 @@ extern json_spirit::Value getpeerinfo(const json_spirit::Array& params, bool fHe
 extern json_spirit::Value dumpprivkey(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp
 extern json_spirit::Value importprivkey(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value sendalert(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value listalerts(const json_spirit::Array& params, bool fHelp);
+
+extern json_spirit::Value sendrule(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value listrules(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value testrule(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value getgenerate(const json_spirit::Array& params, bool fHelp); // in rpcmining.cpp
 extern json_spirit::Value setgenerate(const json_spirit::Array& params, bool fHelp);
@@ -186,6 +209,8 @@ extern json_spirit::Value setstaking(const json_spirit::Array& params, bool fHel
 extern json_spirit::Value checkwallet(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value repairwallet(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value zapwallettxes(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value listcoins(const json_spirit::Array& params, bool fHelp);
+extern json_spirit::Value dustwallet(const json_spirit::Array& params, bool fHelp);
 
 extern json_spirit::Value resendtx(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value makekeypair(const json_spirit::Array& params, bool fHelp);

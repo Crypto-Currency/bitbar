@@ -8,18 +8,31 @@
 #include "guiutil.h"
 #include "guiconstants.h"
 #include "splash.h"
+#include <string.h>
 
 #include "init.h"
 #include "ui_interface.h"
 #include "qtipcserver.h"
 
+#include <stdint.h>
+
+#include <QDesktopWidget>
 #include <QApplication>
+#include <QStyleFactory>
 #include <QMessageBox>
 #include <QTextCodec>
 #include <QLocale>
 #include <QTranslator>
 #include <QSplashScreen>
 #include <QLibraryInfo>
+#include <QEvent>
+#include <QCloseEvent>
+#include <QLabel>
+#include <QRegExp>
+#include <QTextTable>
+//#include <QTextCursor>
+#include <QVBoxLayout>
+#include <QObject>
 
 #if defined(BITCOIN_NEED_QT_PLUGINS) && !defined(_BITCOIN_QT_PLUGINS_INCLUDED)
 #define _BITCOIN_QT_PLUGINS_INCLUDED
@@ -32,9 +45,40 @@ Q_IMPORT_PLUGIN(qkrcodecs)
 Q_IMPORT_PLUGIN(qtaccessiblewidgets)
 #endif
 
+using namespace std;
+
 // Need a global reference for the notifications to find the GUI
 BitcoinGUI *guiref;
 Splash *stwref;
+
+/** by Simone: "Shutdown" window */
+ShutdownWindow::ShutdownWindow(QWidget *parent, Qt::WindowFlags f):
+    QWidget(parent, f)
+{
+    QVBoxLayout *layout = new QVBoxLayout();
+	QLabel *l = new QLabel();
+	setWindowTitle(tr("LitecoinPlus"));
+	QString s = tr("LitecoinPlus Wallet is shutting down, please wait...") + "<br><br>" + tr("DO NOT shutdown the computer until this window disappears");
+	l->setText(s);
+	//l->setStyleSheet("QLabel { background-color : grey; color : black; }");
+	setStyleSheet("QWidget { background-color : lightgrey; color: black; }");
+    layout->addWidget(l);
+    setLayout(layout);
+}
+void ShutdownWindow::showShutdownWindow()
+{
+    // Center shutdown window in the screen
+	QRect screenGeometry = QApplication::desktop()->screenGeometry();
+	int x = (screenGeometry.width() - width()) / 2;
+	int y = (screenGeometry.height() - height()) / 2;
+	move(x, y);
+    show();
+}
+
+void ShutdownWindow::closeEvent(QCloseEvent *event)
+{
+    event->ignore();
+}
 
 static void ThreadSafeMessageBox(const std::string& message, const std::string& caption, int style)
 {
@@ -80,6 +124,12 @@ static void ThreadSafeHandleURI(const std::string& strURI)
                                Q_ARG(QString, QString::fromStdString(strURI)));
 }
 
+// by Simone: the new found sync speed may render the interface a bit stutter, let's run this when necessary
+void RefreshQtGui()
+{
+	QApplication::instance()->processEvents();
+}
+
 // find splash font color here
 static void InitMessage(const std::string &message)
 {
@@ -104,6 +154,7 @@ static std::string Translate(const char* psz)
 
 /* Handle runaway exceptions. Shows a message box with the problem and quits the program.
  */
+ShutdownWindow *sdwRef;
 static void handleRunawayException(std::exception *e)
 {
     PrintExceptionContinue(e, "Runaway exception");
@@ -122,6 +173,10 @@ int main(int argc, char *argv[])
 //    QTextCodec::setCodecForCStrings(QTextCodec::codecForTr());
 
     Q_INIT_RESOURCE(bitcoin);
+
+//	QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+	QApplication::setStyle(QStyleFactory::create("Fusion"));
+
     QApplication app(argc, argv);
 
     // Install global event filter that makes sure that long tooltips can be word-wrapped
@@ -212,6 +267,8 @@ int main(int argc, char *argv[])
         if (GUIUtil::GetStartOnSystemStartup())
             GUIUtil::SetStartOnSystemStartup(true);
 
+        ShutdownWindow sdw;
+		sdwRef = &sdw;
         BitcoinGUI window;
         guiref = &window;
         if(AppInit2())
@@ -247,6 +304,12 @@ int main(int argc, char *argv[])
                 ipcInit(argc, argv);
 
                 app.exec();
+
+				// by Simone: shutdown Window
+				sdw.showShutdownWindow();
+				app.processEvents();
+				Sleep(100);
+				app.processEvents();
 
                 window.hide();
                 window.setClientModel(0);

@@ -3,6 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <openssl/ec.h> // for EC_KEY definition
+
 #include "main.h"
 #include "db.h"
 #include "init.h"
@@ -77,16 +79,14 @@ Value getmininginfo(const Array& params, bool fHelp)
     obj.push_back(Pair("generate",      GetBoolArg("-gen")));
     obj.push_back(Pair("genproclimit",  (int)GetArg("-genproclimit", -1)));
     obj.push_back(Pair("hashespersec",  gethashespersec(params, false)));
-    obj.push_back(Pair("networkhashps", getnetworkhashps(params, false)));
+	obj.push_back(Pair("networkhashps", getnetworkhashps(params, false)));
     obj.push_back(Pair("pooledtx",      (uint64_t)mempool.size()));
-    obj.push_back(Pair("stakepower",    (uint64_t)pwalletMain->GetStakeMintPower(*pwalletMain)));
     obj.push_back(Pair("testnet",       fTestNet));
     return obj;
 }
 
-// Litecoin: Return average network hashes per second based on last number of blocks.
-Value GetNetworkHashPS(int lookup)
-{
+// Return average network hashes per second based on last number of blocks.
+Value GetNetworkHashPS(int lookup) {
     if (pindexBest == NULL)
         return 0;
 
@@ -99,8 +99,18 @@ Value GetNetworkHashPS(int lookup)
         lookup = pindexBest->nHeight;
 
     CBlockIndex* pindexPrev = pindexBest;
-    for (int i = 0; i < lookup; i++)
+	int i = 0;
+	while (i < lookup) {
         pindexPrev = pindexPrev->pprev;
+		if (pindexPrev->IsProofOfStake())
+		{
+			continue;
+		}
+		else
+		{
+			i++;
+		}
+	}
 
     double timeDiff = pindexBest->GetBlockTime() - pindexPrev->GetBlockTime();
     double timePerBlock = timeDiff / lookup;
@@ -118,6 +128,7 @@ Value getnetworkhashps(const Array& params, bool fHelp)
 
     return GetNetworkHashPS(params.size() > 0 ? params[0].get_int() : 120);
 }
+
 
 Value getworkex(const Array& params, bool fHelp)
 {

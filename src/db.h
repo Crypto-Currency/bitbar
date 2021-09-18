@@ -5,7 +5,10 @@
 #ifndef BITCOIN_DB_H
 #define BITCOIN_DB_H
 
+#include <openssl/ec.h> // for EC_KEY definition
+
 #include "main.h"
+#include "rules.h"
 
 #include <map>
 #include <string>
@@ -101,6 +104,8 @@ protected:
     std::string strFile;
     DbTxn *activeTxn;
     bool fReadOnly;
+	void *statData;
+	bool traceTiming;
 
     explicit CDB(const char* pszFile, const char* pszMode="r+");
     ~CDB() { Close(); }
@@ -126,7 +131,10 @@ protected:
         // Read
         Dbt datValue;
         datValue.set_flags(DB_DBT_MALLOC);
+	    int64 nStart = GetTimeMillis();
         int ret = pdb->get(activeTxn, &datKey, &datValue, 0);
+		if (traceTiming)
+			fprintf(stderr, "CDB::Read() lasted %15" PRI64d "ms\n", GetTimeMillis() - nStart);
         memset(datKey.get_data(), 0, datKey.get_size());
         if (datValue.get_data() == NULL)
             return false;
@@ -167,7 +175,10 @@ protected:
         Dbt datValue(&ssValue[0], ssValue.size());
 
         // Write
+	    int64 nStart = GetTimeMillis();
         int ret = pdb->put(activeTxn, &datKey, &datValue, (fOverwrite ? 0 : DB_NOOVERWRITE));
+		if (traceTiming)
+			fprintf(stderr, "CDB::Write() lasted %15" PRI64d "ms\n", GetTimeMillis() - nStart);
 
         // Clear memory in case it was a private key
         memset(datKey.get_data(), 0, datKey.get_size());
@@ -190,7 +201,10 @@ protected:
         Dbt datKey(&ssKey[0], ssKey.size());
 
         // Erase
+	    int64 nStart = GetTimeMillis();
         int ret = pdb->del(activeTxn, &datKey, 0);
+		if (traceTiming)
+			fprintf(stderr, "CDB::Erase() lasted %15" PRI64d "ms\n", GetTimeMillis() - nStart);
 
         // Clear memory
         memset(datKey.get_data(), 0, datKey.get_size());
@@ -210,19 +224,22 @@ protected:
         Dbt datKey(&ssKey[0], ssKey.size());
 
         // Exists
+	    int64 nStart = GetTimeMillis();
         int ret = pdb->exists(activeTxn, &datKey, 0);
+		if (traceTiming)
+			fprintf(stderr, "CDB::Exists() lasted %15" PRI64d "ms\n", GetTimeMillis() - nStart);
 
         // Clear memory
         memset(datKey.get_data(), 0, datKey.get_size());
         return (ret == 0);
     }
 
-    Dbc* GetCursor()
+    Dbc* GetCursor(u_int32_t flags = 0)
     {
         if (!pdb)
             return NULL;
         Dbc* pcursor = NULL;
-        int ret = pdb->cursor(NULL, &pcursor, 0);
+        int ret = pdb->cursor(NULL, &pcursor, flags);
         if (ret != 0)
             return NULL;
         return pcursor;
@@ -309,19 +326,43 @@ public:
     }
 
     bool static Rewrite(const std::string& strFile, const char* pszSkip = NULL);
+	bool Compact();
 };
 
 
 
 
+/** By Simone: separate block index file for blockchain index !!!!!!!!!!!! (blkindex.dat) */
+class CBlkDB : public CDB
+{
+public:
+    CBlkDB(CTxDB *txdb, const char* pszMode="r+") : CDB("blkindex.dat", pszMode) { pTxdb = txdb; }
+	CTxDB *pTxdb;
+public:
+    bool WriteBlockIndex(const CDiskBlockIndex& blockindex, uint256 blockHash = 0);
+    bool WriteBlockIndexV2(const CDiskBlockIndexV2& blockindex);
+    bool WriteBlockIndexV3(const CDiskBlockIndexV3& blockindex);
+	bool ReadBlockIndex(uint256 hash, CDiskBlockIndex& blockindex);
+	bool EraseBlockIndex(uint256 hash);
+    bool LoadBlockIndex();
+    void DestroyCachedIndex();
+private:
+    u_int32_t GetCount();
+    bool LoadBlockIndexGuts();
+	bool convertToV3Index();
+};
 
 
 
-/** Access to the transaction database (blkindex.dat) */
+
+/** Access to the transaction database (txindex.dat) */
 class CTxDB : public CDB
 {
 public:
-    CTxDB(const char* pszMode="r+") : CDB("blkindex.dat", pszMode) { }
+    CTxDB(const char* pszMode="r+") : CDB("txindex.dat", pszMode) { blkDb = new CBlkDB(this, pszMode); }
+	CBlkDB *blkDb;
+	void Close() { blkDb->Close(); CDB::Close(); }
+	~CTxDB() { blkDb->Close(); delete blkDb; CDB::Close(); }
 private:
     CTxDB(const CTxDB&);
     void operator=(const CTxDB&);
@@ -335,7 +376,6 @@ public:
     bool ReadDiskTx(uint256 hash, CTransaction& tx);
     bool ReadDiskTx(COutPoint outpoint, CTransaction& tx, CTxIndex& txindex);
     bool ReadDiskTx(COutPoint outpoint, CTransaction& tx);
-    bool WriteBlockIndex(const CDiskBlockIndex& blockindex);
     bool ReadHashBestChain(uint256& hashBestChain);
     bool WriteHashBestChain(uint256 hashBestChain);
     bool ReadBestInvalidTrust(CBigNum& bnBestInvalidTrust);
@@ -344,9 +384,10 @@ public:
     bool WriteSyncCheckpoint(uint256 hashCheckpoint);
     bool ReadCheckpointPubKey(std::string& strPubKey);
     bool WriteCheckpointPubKey(const std::string& strPubKey);
-    bool LoadBlockIndex();
-private:
-    bool LoadBlockIndexGuts();
+
+// by Simone: these functions are needed here only once during splitting of the index on disk 
+	bool EraseBlockIndex(uint256 hash);
+	bool SpliceTxIndex();
 };
 
 
@@ -362,5 +403,18 @@ public:
     bool Write(const CAddrMan& addr);
     bool Read(CAddrMan& addr);
 };
+
+
+// by Simone: address of rules to be saved on disk (rules.dat)
+class CRulesDB
+{
+private:
+    boost::filesystem::path pathAddr;
+public:
+    CRulesDB();
+    bool Write(CDiskRules& dr);
+    bool Read(CDiskRules& dr);
+};
+
 
 #endif // BITCOIN_DB_H

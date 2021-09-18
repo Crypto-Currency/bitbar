@@ -14,7 +14,7 @@ Splash::Splash(QWidget *parent) :
 
 // adds a timer that randomly replace background
 	timer = new QTimer(this);
-	timer->setInterval(59000);
+	timer->setInterval(19000);
 	connect(timer, SIGNAL(timeout()), this, SLOT(updateTimer()));
 	timer->start();
 
@@ -47,7 +47,7 @@ void Splash::systemOnTop()
 void Splash::setMessage(const char *message)
 {
 // update the message
-	ui->info->setText("<span style='color: black;'>" + tr(message) + "</span>");
+	ui->info->setText("<span style='color: blue;'>" + tr(message) + "</span>");
 	QApplication::instance()->processEvents();
 	Sleep(1);
 	QApplication::instance()->processEvents();

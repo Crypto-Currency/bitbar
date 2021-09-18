@@ -2,6 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <openssl/ec.h> // for EC_KEY definition
+
 #include "init.h" // for pwalletMain
 #include "bitcoinrpc.h"
 #include "ui_interface.h"
@@ -36,7 +38,7 @@ Value importprivkey(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "importprivkey <bitbarprivkey> [label]\n"
+            "importprivkey <BitBarprivkey> [label]\n"
             "Adds a private key (as returned by dumpprivkey) to your wallet.");
 
     string strSecret = params[0].get_str();
@@ -75,8 +77,8 @@ Value dumpprivkey(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "dumpprivkey <bitbaraddress>\n"
-            "Reveals the private key corresponding to <bitbaraddress>.");
+            "dumpprivkey <BitBaraddress>\n"
+            "Reveals the private key corresponding to <BitBaraddress>.");
 
     string strAddress = params[0].get_str();
     CBitcoinAddress address;

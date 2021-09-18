@@ -1,4 +1,4 @@
-## HOW TO COMPILE GITIAN BUILD OF BITGEM QT CLIENT FOR WINDOWS
+## HOW TO COMPILE GITIAN BUILD OF BITBAR QT CLIENT FOR WINDOW
 
 ## Amended for BitBar from Gavin's Notes to getting gitian builds up and running and Onichan's Guide to compiling on Windows (https://bitcointalk.org/index.php?topic=84984.0).
 
@@ -15,7 +15,7 @@
 
 ## Once you've got the right hardware and software we can compile the Windows client
 
-## Clone local copies of litecoinplus and gitian source-codes
+## Clone local copies of bitbar and gitian source-codes
 
 4. Enter Ubuntu terminal
 5. git clone git://github.com/crypto-currency/bitbar bitcoin
@@ -41,18 +41,16 @@
 
 20. sudo bin/make-base-vm --arch i386 --suite precise 
 
-## Build Bitcoin-sCrypt Windows Client
+## Build BitBar Windows Client
 
-21. sudo bin/gbuild ../bitcoin/contrib/gitian-descriptors/qt-win32.yml
+21. sudo bin/gbuild ../bitbar/contrib/gitian-descriptors/qt-win32.yml
 22. cp build/out/qt-win32-4.8.1-gitian.zip inputs
-23. sudo bin/gbuild ../bitcoin/contrib/gitian-descriptors/boost-win32.yml
+23. sudo bin/gbuild ../bitbar/contrib/gitian-descriptors/boost-win32.yml
 24. cp build/out/boost-win32-1.49.0-gitian2.zip inputs
-25. sudo bin/gbuild ../bitcoin/contrib/gitian-descriptors/deps-win32.yml
+25. sudo bin/gbuild ../bitbar/contrib/gitian-descriptors/deps-win32.yml
 26. cp build/out/bitcoin-deps-1.4.0.zip inputs
-27. sudo bin/gbuild ../bitcoin/contrib/gitian-descriptors/gitian-win32.yml
+27. sudo bin/gbuild ../bitbar/contrib/gitian-descriptors/gitian-win32.yml
 
 ## The compiled Windows GUI client, daemon and Windows Installer binaries (along with the source-code) will output to gitian/build/out.
 
 ================================================================
-
-

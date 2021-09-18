@@ -3,9 +3,12 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <openssl/ec.h> // for EC_KEY definition
+
 #include "wallet.h"
 #include "walletdb.h"
 #include "bitcoinrpc.h"
+#include "coincontrol.h"
 #include "init.h"
 #include "base58.h"
 
@@ -88,7 +91,8 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("paytxfee",      ValueFromAmount(nTransactionFee)));
     if (pwalletMain->IsCrypted())
         obj.push_back(Pair("unlocked_until", (boost::int64_t)nWalletUnlockTime / 1000));
-    obj.push_back(Pair("errors",        GetWarnings("statusbar")));
+    obj.push_back(Pair("rules",         nPaladinRuleHeight));
+    obj.push_back(Pair("rules_synced",  !IsInitialRuleDownload()));
     return obj;
 }
 
@@ -211,7 +215,7 @@ Value setaccount(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "setaccount <bitbaraddress> <account>\n"
+            "setaccount <BitBaraddress> <account>\n"
             "Sets the account associated with the given address.");
 
     CBitcoinAddress address(params[0].get_str());
@@ -241,7 +245,7 @@ Value getaccount(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "getaccount <bitbaraddress>\n"
+            "getaccount <BitBaraddress>\n"
             "Returns the account associated with the given address.");
 
     CBitcoinAddress address(params[0].get_str());
@@ -281,7 +285,7 @@ Value sendtoaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 4)
         throw runtime_error(
-            "sendtoaddress <bitbaraddress> <amount> [comment] [comment-to]\n"
+		"sendtoaddress <BitBaraddress> <amount> [comment] [comment-to]\n"
             "<amount> is a real and is rounded to the nearest 0.000001"
             + HelpRequiringPassphrase());
 
@@ -347,7 +351,7 @@ Value signmessage(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 2)
         throw runtime_error(
-            "signmessage <bitbaraddress> <message>\n"
+            "signmessage <BitBaraddress> <message>\n"
             "Sign a message with the private key of an address");
 
     EnsureWalletIsUnlocked();
@@ -382,7 +386,7 @@ Value verifymessage(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 3)
         throw runtime_error(
-            "verifymessage <bitbaraddress> <signature> <message>\n"
+            "verifymessage <BitBaraddress> <signature> <message>\n"
             "Verify a signed message");
 
     string strAddress  = params[0].get_str();
@@ -419,8 +423,8 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "getreceivedbyaddress <bitbaraddress> [minconf=1]\n"
-            "Returns the total amount received by <bitbaraddress> in transactions with at least [minconf] confirmations.");
+            "getreceivedbyaddress <BitBaraddress> [minconf=1]\n"
+            "Returns the total amount received by <BitBaraddress> in transactions with at least [minconf] confirmations.");
 
     // Bitcoin address
     CBitcoinAddress address = CBitcoinAddress(params[0].get_str());
@@ -514,7 +518,7 @@ int64 GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinD
         if (!wtx.IsFinal())
             continue;
 
-        int64 nGenerated = 0, nReceived, nSent, nFee;
+        int64 nGenerated, nReceived, nSent, nFee;
         wtx.GetAccountAmounts(strAccount, nGenerated, nReceived, nSent, nFee);
 
         if (nReceived != 0 && wtx.GetDepthInMainChain() >= nMinDepth)
@@ -647,7 +651,7 @@ Value sendfrom(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 3 || params.size() > 6)
         throw runtime_error(
-            "sendfrom <fromaccount> <tobitbaraddress> <amount> [minconf=1] [comment] [comment-to]\n"
+		"sendfrom <fromaccount> <toBitBaraddress> <amount> [minconf=1] [comment] [comment-to]\n"
             "<amount> is a real and is rounded to the nearest 0.000001"
             + HelpRequiringPassphrase());
 
@@ -691,7 +695,7 @@ Value sendmany(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 4)
         throw runtime_error(
-            "sendmany <fromaccount> {address:amount,...} [minconf=1] [comment]\n"
+		"sendmany <fromaccount> {address:amount,...} [minconf=1] [comment]\n"
             "amounts are double-precision floating point numbers"
             + HelpRequiringPassphrase());
 
@@ -702,6 +706,7 @@ Value sendmany(const Array& params, bool fHelp)
         nMinDepth = params[2].get_int();
 
     CWalletTx wtx;
+	
     wtx.strFromAccount = strAccount;
     if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
         wtx.mapValue["comment"] = params[3].get_str();
@@ -778,7 +783,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
     if ((int)keys.size() < nRequired)
         throw runtime_error(
             strprintf("not enough keys supplied "
-                      "(got %"PRIszu" keys, but need at least %d to redeem)", keys.size(), nRequired));
+                      "(got %" PRIszu " keys, but need at least %d to redeem)", keys.size(), nRequired));
     std::vector<CKey> pubkeys;
     pubkeys.resize(keys.size());
     for (unsigned int i = 0; i < keys.size(); i++)
@@ -835,6 +840,27 @@ struct tallyitem
         nConf = std::numeric_limits<int>::max();
     }
 };
+
+void ListTxIds(const string& strAccount, Array& ret)
+{
+    std::list<CAccountingEntry> acentries;
+    CWallet::TxItems txOrdered = pwalletMain->OrderedTxItems(acentries, strAccount);
+
+// iterate backwards all items
+	Array txids;
+    for (CWallet::TxItems::reverse_iterator it = txOrdered.rbegin(); it != txOrdered.rend(); ++it)
+    {
+        CWalletTx *const pwtx = (*it).second.first;
+        if (pwtx != 0) {
+	        Object obj;
+			obj.push_back(Pair("txid", pwtx->GetHash().GetHex()));
+			txids.push_back(obj);
+		}
+	}
+	Object obj;
+	obj.push_back(Pair("txids", txids));
+	ret.push_back(obj);
+}
 
 Value ListReceived(const Array& params, bool fByAccounts)
 {
@@ -906,6 +932,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
             obj.push_back(Pair("amount",        ValueFromAmount(nAmount)));
             obj.push_back(Pair("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
             ret.push_back(obj);
+			ListTxIds(strAccount, ret);
         }
     }
 
@@ -920,6 +947,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
             obj.push_back(Pair("amount",        ValueFromAmount(nAmount)));
             obj.push_back(Pair("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
             ret.push_back(obj);
+			ListTxIds((*it).first, ret);
         }
     }
 
@@ -928,7 +956,7 @@ Value ListReceived(const Array& params, bool fByAccounts)
 
 Value listreceivedbyaddress(const Array& params, bool fHelp)
 {
-    if (fHelp || params.size() > 2)
+    if (fHelp || params.size() > 3)
         throw runtime_error(
             "listreceivedbyaddress [minconf=1] [includeempty=false]\n"
             "[minconf] is the minimum number of confirmations before payments are included.\n"
@@ -1179,7 +1207,12 @@ Value listsinceblock(const Array& params, bool fHelp)
         uint256 blockId = 0;
 
         blockId.SetHex(params[0].get_str());
-        pindex = CBlockLocator(blockId).GetBlockIndex();
+
+        map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(blockId);
+        if (mi != mapBlockIndex.end() && (*mi).second)
+        {
+            pindex = (*mi).second;
+		}
     }
 
     if (params.size() > 1)
@@ -1333,7 +1366,7 @@ Value keypoolrefill(const Array& params, bool fHelp)
 void ThreadTopUpKeyPool(void* parg)
 {
     // Make this thread recognisable as the key-topping-up thread
-    RenameThread("bitcoin-key-top");
+    RenameThread("bitbar-key-top");
 
     pwalletMain->TopUpKeyPool();
 }
@@ -1341,7 +1374,7 @@ void ThreadTopUpKeyPool(void* parg)
 void ThreadCleanWalletPassphrase(void* parg)
 {
     // Make this thread recognisable as the wallet relocking thread
-    RenameThread("bitcoin-lock-wa");
+    RenameThread("bitbar-lock-wa");
 
     int64 nMyWakeTime = GetTimeMillis() + *((int64*)parg) * 1000;
 
@@ -1554,8 +1587,8 @@ Value validateaddress(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "validateaddress <bitbaraddress>\n"
-            "Return information about <bitbaraddress>.");
+            "validateaddress <BitBaraddress>\n"
+            "Return information about <BitBaraddress>.");
 
     CBitcoinAddress address(params[0].get_str());
     bool isValid = address.IsValid();
@@ -1583,8 +1616,8 @@ Value validatepubkey(const Array& params, bool fHelp)
 {
     if (fHelp || !params.size() || params.size() > 2)
         throw runtime_error(
-            "validatepubkey <bitbarpubkey>\n"
-            "Return information about <bitbarpubkey>.");
+            "validatepubkey <BitBarpubkey>\n"
+            "Return information about <BitBarpubkey>.");
 
     std::vector<unsigned char> vchPubKey = ParseHex(params[0].get_str());
     CPubKey pubKey(vchPubKey);
@@ -1703,7 +1736,7 @@ Value repairwallet(const Array& params, bool fHelp)
     return result;
 }
 
-// BitBar: resend unconfirmed wallet transactions
+// resend unconfirmed wallet transactions
 Value resendtx(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
@@ -1781,23 +1814,20 @@ Value zapwallettxes(const Array& params, bool fHelp)
   std::vector<CWalletTx> vWtx;
   Object result;
 
-  const char *mess="Zapping all transactions from wallet ...\n";
-  printf("%s",mess); // to debug.log
+  printf("Zapping all transactions from wallet ...\n"); // to debug.log
 
   pwalletMain = new CWallet("wallet.dat");
   DBErrors nZapWalletRet = pwalletMain->ZapWalletTx(vWtx);
   if (nZapWalletRet != DB_LOAD_OK)
   {
-    mess="Error loading wallet.dat: Wallet corrupted\n";
-    printf("%s",mess);
-    return(mess);
+    printf("Error loading wallet.dat: Wallet corrupted\n");
+    return("Error loading wallet.dat: Wallet corrupted\n");
   }
 
   delete pwalletMain;
   pwalletMain = NULL;
 
-  mess="Loading wallet...\n";
-  printf("%s",mess);
+  printf("Loading wallet...\n");
 
   bool fFirstRun = true;
   pwalletMain = new CWallet("wallet.dat");
@@ -1808,40 +1838,33 @@ Value zapwallettxes(const Array& params, bool fHelp)
   {
     if (nLoadWalletRet == DB_CORRUPT)
     {
-      mess="Error loading wallet.dat: Wallet corrupted\n";
-      printf("%s",mess);
-      return(mess);
+      printf("Error loading wallet.dat: Wallet corrupted\n");
+      return("Error loading wallet.dat: Wallet corrupted\n");
     }
     else if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
     {
-      mess="Warning: error reading wallet.dat! All keys read correctly, but transaction data or address book entries might be missing or incorrect.\n";
-      printf("%s",mess);
+      printf("Warning: error reading wallet.dat! All keys read correctly, but transaction data or address book entries might be missing or incorrect.\n");
     }
     else if (nLoadWalletRet == DB_TOO_NEW)
     {
-      mess="Error loading wallet.dat: Wallet requires newer version of Bitbar\n";
-      printf("%s",mess);
-      return(mess);
+      printf("Error loading wallet.dat: Wallet requires newer version of BitBar\n");
+      return("Error loading wallet.dat: Wallet requires newer version of BitBar\n");
     }
     else if (nLoadWalletRet == DB_NEED_REWRITE)
     {
-      mess="Wallet needed to be rewritten: restart Bitbar to complete\n";
-      printf("%s",mess);
-      return(mess);
+      printf("Wallet needed to be rewritten: restart BitBar to complete\n");
+      return("Wallet needed to be rewritten: restart BitBar to complete\n");
     }
     else
     {
-      mess="Unknown error loading wallet.dat\n";
-      printf("%s",mess);
-      return(mess);
+      printf("Unknown error loading wallet.dat\n");
+      return("Unknown error loading wallet.dat\n");
     } 
   }
   
-  mess="Wallet loaded...\n";
-  printf("%s",mess);
+  printf("Wallet loaded...\n");
 
-  mess="Loaded lables...\n";
-  printf("%s",mess);
+  printf("Loaded lables...\n");
 
   // Restore wallet transaction metadata
   BOOST_FOREACH(const CWalletTx& wtxOld, vWtx)
@@ -1862,16 +1885,239 @@ Value zapwallettxes(const Array& params, bool fHelp)
       copyTo->WriteToDisk();
     }
   }
-  mess="scanning for transactions...\n";
-  printf("%s",mess);
+  printf("scanning for transactions...\n");
 
   pwalletMain->ScanForWalletTransactions(pindexGenesisBlock, true);
   pwalletMain->ReacceptWalletTransactions();
-  mess="Please restart your wallet.\n";
-  printf("%s",mess);
+  printf("Please restart your wallet.\n");
 
-  mess="Zap Wallet Finished.\nPlease restart your wallet for changes to take effect.\n";
+  return ("Zap Wallet Finished.\nPlease restart your wallet for changes to take effect.\n");
+}
 
-  return (mess);
+// by Simone: local version of strPad
+string strPad(string s, long unsigned int nPadLength, string sPadding)
+{
+	while (s.length() < nPadLength)
+	{
+		s = sPadding + s;
+	}
+    return s;
+}
+
+// by Simone: function used only by dustwallet below, to refresh coin list
+void dwListCoins(map<string, vector<COutput> > &mapCoins)
+{
+	std::vector<COutput> vCoins;
+	pwalletMain->AvailableCoins(vCoins);
+	std::vector<COutPoint> vLockedCoins;
+
+	// add locked coins
+	BOOST_FOREACH(const COutPoint& outpoint, vLockedCoins)
+	{
+		if (!pwalletMain->mapWallet.count(outpoint.hash)) continue;
+		COutput out(&pwalletMain->mapWallet[outpoint.hash], outpoint.n, pwalletMain->mapWallet[outpoint.hash].GetDepthInMainChain());
+		vCoins.push_back(out);
+	}
+
+	BOOST_FOREACH(const COutput& out, vCoins)
+	{
+		COutput cout = out;
+ 
+		while (pwalletMain->IsChange(cout.tx->vout[cout.i]) && cout.tx->vin.size() > 0 && pwalletMain->IsMine(cout.tx->vin[0]))
+		{
+			if (!pwalletMain->mapWallet.count(cout.tx->vin[0].prevout.hash)) break;
+			cout = COutput(&pwalletMain->mapWallet[cout.tx->vin[0].prevout.hash], cout.tx->vin[0].prevout.n, 0);
+		}
+ 
+		CTxDestination address;
+		if(!ExtractDestination(cout.tx->vout[cout.i].scriptPubKey, address)) continue;
+		mapCoins[strPad(boost::to_string(out.tx->vout[out.i].nValue), 18, "0") + out.tx->GetHash().GetHex()].push_back(out);
+	}
+}
+
+// by Simone: listcoins, with same logic used for dust, to debug
+Value listcoins(const Array& params, bool fHelp)
+{
+    Array ret;
+
+	if (fHelp)
+		throw runtime_error("listcoins [totalcount=true]\n"
+			"List the coins that are used by the dustwallet function, in the same exact order and filter that it is used there. If nothing is specified, just the total number is shown.\n");
+
+// loop unlocked coins
+	map<string, vector<COutput> > mapCoins;
+	dwListCoins(mapCoins);
+
+// decide what to show
+	bool showSize = true;
+    if (params.size() > 0)
+	{
+		if (!params[0].get_bool())
+		{
+			showSize = false;
+		}
+	}
+	if (showSize)
+	{
+		Object obj;
+		obj.push_back(Pair("block_count", (int64_t)mapCoins.size()));
+		return obj;
+	}
+
+    BOOST_FOREACH(PAIRTYPE(string, vector<COutput>) coins, mapCoins)
+    {
+		Object obj;
+
+		obj.push_back(Pair("map_index", coins.first));
+        BOOST_FOREACH(const COutput& out, coins.second)
+        {
+			obj.push_back(Pair("amount", boost::to_string(out.tx->vout[out.i].nValue)));
+		}
+		ret.push_back(obj);
+	}
+	return(ret);
+}
+
+// by Simone: dustwallet
+Value dustwallet(const Array& params, bool fHelp)
+{
+	CCoinControl coinControl;
+    Array ret;
+
+	if (fHelp || params.size() < 1)
+		throw runtime_error("dustwallet <address> [blocks=2000]\n"
+			"Execute the block dusting (compacting) of the chain, to the specified <address>. Blocks is the total number of blocks at which to stop dusting (defaults to 2000).\n");
+
+// check whether sending is suspended
+	if (nSendSuspended)
+		throw JSONRPCError(RPC_WALLET_ERROR, "Sending is currently suspended network wise");
+
+// we need to be unlocked first
+	EnsureWalletIsUnlocked();
+
+// loop unlocked coins
+	map<string, vector<COutput> > mapCoins;
+	dwListCoins(mapCoins);
+
+// declare some settings
+	int blockCount = mapCoins.size();
+	int minimumBlockAmount = 2000;
+	if (params.size() > 1)
+		minimumBlockAmount = params[1].get_int();
+	int blockDivisor = 80;
+
+// check number of blocks and do some preparation for the loop
+	if (blockCount <= minimumBlockAmount)
+	{
+		return("The wallet is already optimized.");
+	}
+	int nOps = ((blockCount - minimumBlockAmount) / blockDivisor) + 1;
+	int nOdds = (blockCount - minimumBlockAmount) % blockDivisor;
+	if (nOdds == 1)
+	{
+		nOdds = blockDivisor + 1;
+	}
+	else if (nOdds == 2)
+	{
+		nOdds = blockDivisor + 2;
+	}
+	else if (nOdds == 0)
+	{
+		nOdds = blockDivisor;
+	}
+	if (nOdds >= (blockCount - minimumBlockAmount))
+	{
+		nOdds = blockCount - minimumBlockAmount + 2;		// optimize the last piece to the target length
+	}
+
+	// now, let's select the first batch of items
+	int64 selectionSum;
+	while (nOps > 0) {
+
+		// reset previous selection
+		Object obj;
+		selectionSum = 0;
+		int i = nOdds;
+		coinControl.SetNull();
+		BOOST_FOREACH(PAIRTYPE(string, vector<COutput>) coins, mapCoins)
+		{
+		    BOOST_FOREACH(const COutput& out, coins.second)
+		    {
+
+			// prepare selection here
+				selectionSum += out.tx->vout[out.i].nValue;
+				COutPoint outpt(out.tx->GetHash(), out.i);
+				coinControl.Select(outpt);
+
+
+				//fprintf(stderr, "%d --> [%ld] %s/%d\n", i, selectionSum, uint256(itemTx->text().toStdString()).ToString().c_str(), itemVout->text().toUInt());
+				i--;
+				if (i < 0) 
+				{
+					break;
+				}
+			}
+			if (i < 0) 
+			{
+				break;
+			}
+		}
+
+	// sending block here
+		obj.push_back(Pair("selected_coins", nOdds));
+		obj.push_back(Pair("selection_sum", boost::to_string(selectionSum)));
+
+	// because we select all coins manually, we do our own shit here
+		std::vector<COutput> vCoins;
+		pwalletMain->AvailableCoins(vCoins, true, &coinControl);
+		std::vector<std::pair<CScript, int64> > vecSend;
+        CScript scriptPubKey;
+        scriptPubKey.SetDestination(CBitcoinAddress(params[0].get_str()).Get());
+        vecSend.push_back(make_pair(scriptPubKey, selectionSum - 110));	// this is safe value to not incurr in "not enough for fee" errors, in any case it will be credited back as "change"
+
+        CWalletTx wtx;
+        CReserveKey keyChange(pwalletMain);
+        int64 nFeeRequired = 0;
+        bool fCreated = pwalletMain->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, &coinControl);
+		if (!fCreated)
+		{
+			throw JSONRPCError(RPC_WALLET_ERROR, "Transaction creation failed");
+		}
+		if (!pwalletMain->CommitTransaction(wtx, keyChange))
+		{
+			throw JSONRPCError(RPC_WALLET_ERROR, "Transaction commit failed");
+		}
+
+	// store the txid alongside the total and # of blocks selected
+		obj.push_back(Pair("txid", wtx.GetHash().GetHex()));
+		ret.push_back(obj);
+
+	// refresh the coin map
+		mapCoins.clear();
+		dwListCoins(mapCoins);
+		blockCount = mapCoins.size();
+		nOps = (blockCount - minimumBlockAmount) / blockDivisor;
+		nOdds = (blockCount - minimumBlockAmount) % blockDivisor;
+		if (nOdds == 1)
+		{
+			nOdds = blockDivisor + 1;
+		}
+		else if (nOdds == 2)
+		{
+			nOdds = blockDivisor + 2;
+		}
+		else if (nOdds == 0)
+		{
+			nOdds = blockDivisor;
+		}
+		if (nOdds >= (blockCount - minimumBlockAmount))
+		{
+			nOdds = blockCount - minimumBlockAmount + 1;		// optimize the last piece to the target length
+		}
+	}
+
+// return the array of txids and amount combined
+    return ret;
+
 }
 
