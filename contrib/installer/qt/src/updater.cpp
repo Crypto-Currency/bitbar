@@ -35,7 +35,7 @@ string initicker="BTB";// check GetDefaultDataDir() for lowercase
 string DirName="BitBar";
 string downlocation="https://bitbar.co/Downloads";
 QString downloadLocation;
-string appname="Bitbar-qt.exe";
+string appname="bitbar-qt.exe";
 string apppath="C:\\"+DirName+"\\";
 
 std::string FileName;
@@ -169,6 +169,8 @@ void UpdaterForm::getlist()
 
   QNetworkRequest request;
   downloadLocation = QString::fromStdString(downlocation+"/version.txt");
+  temp="attempting download  "+downloadLocation.toStdString();
+  ui.TextEdit->appendPlainText(temp.c_str());
 
   request.setUrl(QUrl(downloadLocation));
   request.setRawHeader("User-Agent", "Wallet update request");
