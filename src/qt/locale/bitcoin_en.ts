@@ -2235,7 +2235,7 @@ Address: %4
     </message>
     <message>
         <location line="+6"/>
-        <source>Listen for JSON-RPC connections on &lt;port&gt; (default: 8344 or testnet: 18344)</source>
+        <source>Listen for JSON-RPC connections on &lt;port&gt; (default: 9344 or testnet: 19344)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
