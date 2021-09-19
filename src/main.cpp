@@ -3299,7 +3299,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             int index= incomingver.find(':');
             std::string testver=incomingver.substr(index); // first chr should be ':'
 		        if (sscanf(testver.c_str(), ":%d.%d.%d.%d", &v1, &v2, &v3, &v4) == 4)
-//		    if (sscanf(pfrom->cleanSubVer.c_str(), "LitecoinPlus:%d.%d.%d.%d", &v1, &v2, &v3, &v4) == 4)
+//		    if (sscanf(pfrom->cleanSubVer.c_str(), "BitBar:%d.%d.%d.%d", &v1, &v2, &v3, &v4) == 4)
             {
               int cVer = 
                            1000000 * v1

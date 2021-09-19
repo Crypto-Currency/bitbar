@@ -57,8 +57,8 @@ ShutdownWindow::ShutdownWindow(QWidget *parent, Qt::WindowFlags f):
 {
     QVBoxLayout *layout = new QVBoxLayout();
 	QLabel *l = new QLabel();
-	setWindowTitle(tr("LitecoinPlus"));
-	QString s = tr("LitecoinPlus Wallet is shutting down, please wait...") + "<br><br>" + tr("DO NOT shutdown the computer until this window disappears");
+	setWindowTitle(tr("Bitbar"));
+	QString s = tr("Bitbar Wallet is shutting down, please wait...") + "<br><br>" + tr("DO NOT shutdown the computer until this window disappears");
 	l->setText(s);
 	//l->setStyleSheet("QLabel { background-color : grey; color : black; }");
 	setStyleSheet("QWidget { background-color : lightgrey; color: black; }");

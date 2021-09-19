@@ -33,7 +33,7 @@ bool sucess=false;
 
 string initicker="BTB";// check GetDefaultDataDir() for lowercase
 string DirName="BitBar";
-string downlocation="https://bitbar.co/Downloads";
+string downlocation="http://bitbar.co/Downloads";
 QString downloadLocation;
 string appname="bitbar-qt.exe";
 string apppath="C:\\"+DirName+"\\";
@@ -115,6 +115,11 @@ void UpdaterForm::start()
   {
     QMessageBox::information(this,tr("creating path"),tr(e.what()) );
   }
+
+temp="Build "+QSslSocket::sslLibraryBuildVersionString().toStdString();
+ui.TextEdit->appendPlainText(temp.c_str());
+temp="Version "+QSslSocket::sslLibraryVersionString().toStdString();
+ui.TextEdit->appendPlainText(temp.c_str());
 
 // get local version.txt and read it
   string filename = strDataDir + "/version.txt";

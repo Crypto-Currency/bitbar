@@ -221,7 +221,7 @@ private slots:
     void gotoDustingPage();
     /** Switch to alert page */
     void gotoAlertsPage();
-    // Open LitecoinPlus.conf
+    // Open bitbar.conf
     void openConfig();
     /** Switch to receive coins page */
     void gotoReceiveCoinsPage();

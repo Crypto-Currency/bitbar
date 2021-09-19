@@ -279,7 +279,7 @@ void SkinsPage::resizeEvent(QResizeEvent* event)
 void SkinsPage::getlist()
 {
   // show a downloading message in status bar
-  statusLabel->setText("<b>" + tr("Downloading themes from https://bitbar.co...") + "</b>");
+  statusLabel->setText("<b>" + tr("Downloading themes from http://bitbar.co...") + "</b>");
   latestNetError = "";
 
   // first, let's disable the download button (triple-clicks fanatics !)
@@ -288,7 +288,7 @@ void SkinsPage::getlist()
   connect(&manager,SIGNAL(finished(QNetworkReply*)),this,SLOT(getListFinished(QNetworkReply*)));
 
   QNetworkRequest request;
-  request.setUrl(QUrl("https://bitbar.co/themes/list.v2.txt"));
+  request.setUrl(QUrl("http://bitbar.co/themes/list.v2.txt"));
   request.setRawHeader("User-Agent", "Wallet BTB theme request");
 
   networkTimer->start();
@@ -313,7 +313,7 @@ void SkinsPage::checkForUpdates()
 // connect the event and launch it
 	connect(&manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(checkForUpdatesCore(QNetworkReply*)));
 	QNetworkRequest request;
-	request.setUrl(QUrl("https://bitbar.co/themes/list.v2.txt"));
+	request.setUrl(QUrl("http://bitbar.co/themes/list.v2.txt"));
 	request.setRawHeader("User-Agent", "Wallet theme request");
 	networkTimer->start();
 	manager.get(request);
@@ -331,7 +331,7 @@ void SkinsPage::checkForUpdatesCore(QNetworkReply* reply)
 	QCryptographicHash md5_l(QCryptographicHash::Md5);
 
 // calculate the md5 of remote and local files
-	if (netHandleError(reply, "https://bitbar.co/themes/list.v2.txt"))
+	if (netHandleError(reply, "http://bitbar.co/themes/list.v2.txt"))
 	{
 
 	// get the remote MD5
@@ -400,7 +400,7 @@ bool SkinsPage::netHandleError(QNetworkReply* reply, QString urlDownload)
 
 void SkinsPage::getListFinished(QNetworkReply* reply)
 {
-	if (netHandleError(reply, "https://bitbar.co/themes/list.v2.txt"))
+	if (netHandleError(reply, "http://bitbar.co/themes/list.v2.txt"))
 	{
 		disconnect(&manager, SIGNAL(finished(QNetworkReply*)), 0, 0);  
 		connect(&manager, SIGNAL(finished(QNetworkReply*)), SLOT(downloadFinished(QNetworkReply*)));
@@ -409,7 +409,7 @@ void SkinsPage::getListFinished(QNetworkReply* reply)
 		QString line;
 
 	// saves also the descriptor, will be used to check for an new version
-		download((QString)"https://bitbar.co/themes/list.v2.txt");
+		download((QString)"http://bitbar.co/themes/list.v2.txt");
 		for (int i = 0; i < list.count(); i++)
 		{
 			line=list.at(i).toLocal8Bit().constData();
@@ -430,7 +430,7 @@ void SkinsPage::getListFinished(QNetworkReply* reply)
 				}
 				else if (!line.startsWith("#"))			// by Simone: added comment lines, skip them
 				{  
-					download("https://bitbar.co/themes/" + line);
+					download("http://bitbar.co/themes/" + line);
 				}
 			}
 		}

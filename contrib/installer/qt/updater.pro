@@ -1,6 +1,7 @@
 TEMPLATE = app
 TARGET = updater-qt
 
+CONFIG += no_include_pwd
 CONFIG += thread -w
 QT += network
 

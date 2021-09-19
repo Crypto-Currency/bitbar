@@ -1588,7 +1588,7 @@ void BitcoinGUI::openConfig()
     boost::filesystem::ofstream(pathConfig.string().c_str());
     // rename to same name, also closes if open
     boost::filesystem::rename(pathConfig.string().c_str(),pathConfig.string().c_str());
-    /* Open bitbarLitecoinPlus.conf with the associated application */
+    /* Open bitbar.conf with the associated application */
     QDesktopServices::openUrl(QUrl::fromLocalFile(pathConfig.string().c_str()));
   }
 }
