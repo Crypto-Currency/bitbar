@@ -404,7 +404,7 @@ boost::filesystem::path GetDefaultAppDir()
     // Unix: ~/.DirName
 #ifdef WIN32
     // Windows
-    return "C:/"+DirName;
+    return "C:/"+DirName+"/";
 #else
     fs::path pathRet;
     char* pszHome = getenv("HOME");
