@@ -614,14 +614,14 @@ bool AppInit2()
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
     printf("Used data directory %s\n", strDataDir.c_str());
     //check for themes directory, and create if missing
-    if (!filesystem::exists(GetDataDir() / "themes"))
+    if (!boost::filesystem::exists(GetDataDir() / "themes"))
     {
       boost::filesystem::path temppath;
       temppath = GetDataDir() / "themes";
-      filesystem::create_directory(temppath);
+      boost::filesystem::create_directory(temppath);
       printf("created themes directory %s\n", temppath.string().c_str());
       temppath = GetDataDir() / "themes/images";
-      filesystem::create_directory(temppath);
+      boost::filesystem::create_directory(temppath);
       printf("created themes directory %s\n", temppath.string().c_str());
     }
 
@@ -662,7 +662,7 @@ bool AppInit2()
             return false;
     }
 
-    if (filesystem::exists(GetDataDir() / "wallet.dat"))
+    if (boost::filesystem::exists(GetDataDir() / "wallet.dat"))
     {
         CDBEnv::VerifyResult r = bitdb.Verify("wallet.dat", CWalletDB::Recover);
         if (r == CDBEnv::RECOVER_OK)
@@ -1026,11 +1026,11 @@ bool AppInit2()
         }
     }
 
-    filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
-    if (filesystem::exists(pathBootstrap)) {
+    boost::filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
+    if (boost::filesystem::exists(pathBootstrap)) {
         FILE *file = fopen(pathBootstrap.string().c_str(), "rb");
         if (file) {
-            filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
+            boost::filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
             LoadExternalBlockFile(file);
             RenameOver(pathBootstrap, pathBootstrapOld);
         }

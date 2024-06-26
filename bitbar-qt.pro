@@ -114,7 +114,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/rules.h \
     src/addrman.h \
     src/base58.h \
-    src/bignum.h \
+#    src/bignum.h \
     src/checkpoints.h \
     src/coincontrol.h \
     src/compat.h \
@@ -195,35 +195,35 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/alertgui.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
-    src/bignum/bn_add.c \
-    src/bignum/bn_asm.c \
-    src/bignum/bn_blind.c \
-    src/bignum/bn_const.c \
-    src/bignum/bn_ctx.c \
-    src/bignum/bn_depr.c \
-    src/bignum/bn_div.c \
-    src/bignum/bn_err.c \
-    src/bignum/bn_exp.c \
-    src/bignum/bn_exp2.c \
-    src/bignum/bn_gcd.c \
-    src/bignum/bn_gf2m.c \
-    src/bignum/bn_kron.c \
-    src/bignum/bn_lib.c \
-    src/bignum/bn_mod.c \
-    src/bignum/bn_mont.c \
-    src/bignum/bn_mpi.c \
-    src/bignum/bn_mul.c \
-    src/bignum/bn_nist.c \
-    src/bignum/bn_prime.c \
-    src/bignum/bn_print.c \
-    src/bignum/bn_rand.c \
-    src/bignum/bn_recp.c \
-    src/bignum/bn_shift.c \
-    src/bignum/bn_sqr.c \
-    src/bignum/bn_sqrt.c \
-    src/bignum/bn_word.c \
-    src/bignum/bn_x931p.c \
-    src/bignum/bn_misc.c \
+#    src/bignum/bn_add.c \
+#    src/bignum/bn_asm.c \
+#    src/bignum/bn_blind.c \
+#    src/bignum/bn_const.c \
+#    src/bignum/bn_ctx.c \
+#    src/bignum/bn_depr.c \
+#    src/bignum/bn_div.c \
+#    src/bignum/bn_err.c \
+#    src/bignum/bn_exp.c \
+#    src/bignum/bn_exp2.c \
+#    src/bignum/bn_gcd.c \
+#    src/bignum/bn_gf2m.c \
+#    src/bignum/bn_kron.c \
+#    src/bignum/bn_lib.c \
+#    src/bignum/bn_mod.c \
+#    src/bignum/bn_mont.c \
+#    src/bignum/bn_mpi.c \
+#    src/bignum/bn_mul.c \
+#    src/bignum/bn_nist.c \
+#    src/bignum/bn_prime.c \
+#    src/bignum/bn_print.c \
+#    src/bignum/bn_rand.c \
+#    src/bignum/bn_recp.c \
+#    src/bignum/bn_shift.c \
+#    src/bignum/bn_sqr.c \
+#    src/bignum/bn_sqrt.c \
+#    src/bignum/bn_word.c \
+#    src/bignum/bn_x931p.c \
+#    src/bignum/bn_misc.c \
     src/alert.cpp \
     src/rules.cpp \
     src/version.cpp \
