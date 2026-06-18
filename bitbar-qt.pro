@@ -2,6 +2,8 @@ TEMPLATE = app
 TARGET = bitbar-qt
 VERSION = 0.8.0
 INCLUDEPATH += src src/json src/qt
+
+DEFINES -= USE_UPNP
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
 CONFIG += thread -w
@@ -11,58 +13,119 @@ QT += network
 OBJECTS_DIR = build
 MOC_DIR = build
 UI_DIR = build
+CODECFORTR = UTF-8
 
-# use: qmake "RELEASE=1"
-contains(RELEASE, 1) {
-    # Mac: compile for maximum compatibility (10.5, 32-bit)
-    macx:QMAKE_CXXFLAGS += -mmacosx-version-min=10.5 -arch i386 -isysroot /Developer/SDKs/MacOSX10.5.sdk
+# System Architecture Targeting & Static Toolchain Linkage
+win32 {
+    CONFIG += static
+    DEFINES += _WINDOWS WIN32 _MT
 
-    !windows:!macx {
-        # Linux: static link
+    # Enable modern ASLR and DEP security mitigation layouts
+    QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
+
+    # Core Crypto Wallet Static Dependencies (Strict Link Ordering)
+    LIBS += -ldb_cxx -lssl -lcrypto
+    LIBS += -lboost_filesystem-mt-x64 -lboost_program_options-mt-x64 -lboost_thread-mt-x64 -lboost_chrono-mt-x64
+
+    # Mandatory Windows Kernel Mappings (Required for Networking & OpenSSL 3.0)
+    LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32 -luser32 -lcrypt32 -liphlpapi
+
+    # Static compiler enforcement settings
+    LIBS += -lmingwthrd -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,--stack,16777216
+
+    RC_FILE = src/qt/res/bitcoin-qt.rc
+}
+
+!win32 {
+    # Linux and Unix Native Platform Enforcements
+    QMAKE_CXXFLAGS *= -fstack-protector-all --param ssp-buffer-size=1 -DBOOST_BIND_GLOBAL_PLACEHOLDERS
+    QMAKE_LFLAGS *= -rdynamic -fstack-protector-all --param ssp-buffer-size=1
+    !macx {
+        DEFINES += LINUX
+        LIBS += -lrt
+        QMAKE_LFLAGS *= -no-pie
+    }
+    contains(RELEASE, 1) {
         LIBS += -Wl,-Bstatic
     }
 }
 
-!win32 {
-# for extra security against potential buffer overflows: enable GCCs Stack Smashing Protection
-QMAKE_CXXFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
-QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
-# We need to exclude this for Windows cross compile with MinGW 4.2.x, as it will result in a non-working executable!
-# This can be enabled for Windows, when we switch to MinGW >= 4.4.x.
-}
-# for extra security on Windows: enable ASLR and DEP via GCC linker flags
-win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
+# Mac Build Framework Targets
+macx {
+    HEADERS += src/qt/macdockiconhandler.h
+    OBJECTIVE_SOURCES += src/qt/macdockiconhandler.mm
+    LIBS += -framework Foundation -framework ApplicationServices -framework AppKit
+    DEFINES += MAC_OSX MSG_NOSIGNAL=0
+    ICON = src/qt/res/icons/bitcoin.icns
+    TARGET = "bitbar-qt"
 
-# use: qmake "USE_QRCODE=1"
-# libqrencode (http://fukuchi.org/works/qrencode/index.en.html) must be installed for support
+    # Define a default empty prefix variable
+    DEP_PREFIX = ""
+
+    # 1. First Check: Detect MacPorts by verifying if its system binary folder exists
+    exists(/opt/local/bin/port) {
+        message("MacPorts environment detected!")
+        DEP_PREFIX = /opt/local
+    } else {
+        # 2. Second Check: Fall back to Homebrew by dynamically pulling its execution prefix
+        message("Homebrew environment or fallback detected!")
+        DEP_PREFIX = $$system(brew --prefix)
+    }
+
+    # Dynamic Include Headers Path Mapping (Using whichever manager won the check)
+    INCLUDEPATH += $$DEP_PREFIX/include
+    INCLUDEPATH += $$DEP_PREFIX/opt/boost/include
+    INCLUDEPATH += $$DEP_PREFIX/opt/openssl@3/include
+    INCLUDEPATH += $$DEP_PREFIX/opt/berkeley-db@5/include
+
+    # Dynamic Library Binary Path Mapping
+    LIBS += -L$$DEP_PREFIX/lib
+    LIBS += -L$$DEP_PREFIX/opt/boost/lib -lboost_filesystem -lboost_program_options -lboost_thread
+    LIBS += -L$$DEP_PREFIX/opt/openssl@3/lib -lcrypto -lssl
+    LIBS += -L$$DEP_PREFIX/opt/berkeley-db@5/lib -ldb_cxx
+
+    contains(RELEASE, 1) {
+        QMAKE_CXXFLAGS += -arch x86_64
+        QMAKE_LFLAGS += -arch x86_64
+    }
+}
+
+
+
+# Optional Feature: QRCode Support
 contains(USE_QRCODE, 1) {
     message(Building with QRCode support)
     DEFINES += USE_QRCODE
+    HEADERS += src/qt/qrcodedialog.h
+    SOURCES += src/qt/qrcodedialog.cpp
+    FORMS += src/qt/forms/qrcodedialog.ui
     LIBS += -lqrencode
 }
 
-# use: qmake "USE_UPNP=1" ( enabled by default; default)
-#  or: qmake "USE_UPNP=0" (disabled by default)
-#  or: qmake "USE_UPNP=-" (not supported)
-# miniupnpc (http://miniupnp.free.fr/files/) must be installed for support
-contains(USE_UPNP, -) {
-    message(Building without UPNP support)
-} else {
-    message(Building with UPNP support)
-    count(USE_UPNP, 0) {
-        USE_UPNP=1
-    }
-    DEFINES += USE_UPNP=$$USE_UPNP STATICLIB
-    INCLUDEPATH += $$MINIUPNPC_INCLUDE_PATH
-    LIBS += $$join(MINIUPNPC_LIB_PATH,,-L,) -lminiupnpc
-    win32:LIBS += -liphlpapi
-}
+## Optional Feature: UPNP Nat Traversal (Enabled by default)
+#contains(USE_UPNP, -) {
+#    message(Building without UPNP support)
+#} else {
+#    message(Building with UPNP support)
+#    count(USE_UPNP, 0) {
+#        USE_UPNP=1
+#    }
+#    DEFINES += USE_UPNP=$$USE_UPNP STATICLIB
+#    INCLUDEPATH += $$MINIUPNPC_INCLUDE_PATH
+#    LIBS += $$join(MINIUPNPC_LIB_PATH,,-L,) -lminiupnpc
+#}
 
-# use: qmake "USE_DBUS=1"
+# Optional Feature: DBUS Desktop Notifications
 contains(USE_DBUS, 1) {
-    message(Building with DBUS (Freedesktop notifications) support)
+    message(Building with DBUS support)
     DEFINES += USE_DBUS
     QT += dbus
+}
+
+# Optional Feature: First Class Messaging Layouts
+contains(FIRST_CLASS_MESSAGING, 1) {
+    message(Building with first-class messaging)
+    DEFINES += FIRST_CLASS_MESSAGING
 }
 
 contains(BITCOIN_NEED_QT_PLUGINS, 1) {
@@ -70,9 +133,35 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
 
+# Optional Unit Testing Mechanics
+contains(BITCOIN_QT_TEST, 1) {
+    SOURCES += src/qt/test/test_main.cpp \
+        src/qt/test/uritests.cpp
+    HEADERS += src/qt/test/uritests.h
+    DEPENDPATH += src/qt/test
+    QT += testlib
+    TARGET = bitcoin-qt_test
+    DEFINES += BITCOIN_QT_TEST
+}
 
-# regenerate src/build.h
-!windows|contains(USE_BUILD_INFO, 1) {
+# Automated Translation File Generation Processing (lrelease engine setup)
+TRANSLATIONS = $$files(src/qt/locale/bitcoin_*.ts)
+
+isEmpty(QMAKE_LRELEASE) {
+    win32:QMAKE_LRELEASE = lrelease
+    else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+}
+isEmpty(QM_DIR):QM_DIR = $$PWD/src/qt/locale
+
+TSQM.name = lrelease ${QMAKE_FILE_IN}
+TSQM.input = TRANSLATIONS
+TSQM.output = $$QM_DIR/${QMAKE_FILE_BASE}.qm
+TSQM.commands = $$QMAKE_LRELEASE ${QMAKE_FILE_IN} -qm ${QMAKE_FILE_OUT}
+TSQM.CONFIG = no_link
+QMAKE_EXTRA_COMPILERS += TSQM
+
+# Git-Build Version Header Hook
+!win32|contains(USE_BUILD_INFO, 1) {
     genbuild.depends = FORCE
     genbuild.commands = cd $$PWD; /bin/sh share/genbuild.sh $$OUT_PWD/build/build.h
     genbuild.target = $$OUT_PWD/build/build.h
@@ -81,40 +170,19 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     DEFINES += HAVE_BUILD_INFO
 }
 
-#QMAKE_CXXFLAGS += -msse2 -w
-#QMAKE_CFLAGS += -msse2
-# If we have an arm device, we can't use sse2, so define as thumb
-# Because of scrypt_mine.cpp, we also have to add a compile
-#     flag that states we *really* don't have SSE
-# Otherwise, assume sse2 exists
-QMAKE_XCPUARCH = $$QMAKE_HOST.arch
-equals(QMAKE_XCPUARCH, armv7l) {
-    message(Building without SSE2 support)
-	QMAKE_CXXFLAGS += -DNOSSE
-    QMAKE_CFLAGS += -DNOSSE
-}
-else:equals(QMAKE_XCPUARCH, armv6l) {
-    message(Building without SSE2 support)
-	QMAKE_CXXFLAGS += -DNOSSE
-    QMAKE_CFLAGS += -DNOSSE
-}
-else {
-    message(Building with SSE2 support)
-    QMAKE_CXXFLAGS += -msse2 -w
-    QMAKE_CFLAGS += -msse2
-}
-#endif
-
+QMAKE_CXXFLAGS += -msse2 -w
+QMAKE_CFLAGS += -msse2
 QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector
 
-# Input
 DEPENDPATH += src src/json src/qt
+
+# Core Application File Tree Array Targets
 HEADERS += src/qt/bitcoingui.h \
     src/alert.h \
     src/rules.h \
     src/addrman.h \
     src/base58.h \
-#    src/bignum.h \
+    src/bignum.h \
     src/checkpoints.h \
     src/coincontrol.h \
     src/compat.h \
@@ -195,35 +263,6 @@ HEADERS += src/qt/bitcoingui.h \
 	src/qt/alertgui.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
-#    src/bignum/bn_add.c \
-#    src/bignum/bn_asm.c \
-#    src/bignum/bn_blind.c \
-#    src/bignum/bn_const.c \
-#    src/bignum/bn_ctx.c \
-#    src/bignum/bn_depr.c \
-#    src/bignum/bn_div.c \
-#    src/bignum/bn_err.c \
-#    src/bignum/bn_exp.c \
-#    src/bignum/bn_exp2.c \
-#    src/bignum/bn_gcd.c \
-#    src/bignum/bn_gf2m.c \
-#    src/bignum/bn_kron.c \
-#    src/bignum/bn_lib.c \
-#    src/bignum/bn_mod.c \
-#    src/bignum/bn_mont.c \
-#    src/bignum/bn_mpi.c \
-#    src/bignum/bn_mul.c \
-#    src/bignum/bn_nist.c \
-#    src/bignum/bn_prime.c \
-#    src/bignum/bn_print.c \
-#    src/bignum/bn_rand.c \
-#    src/bignum/bn_recp.c \
-#    src/bignum/bn_shift.c \
-#    src/bignum/bn_sqr.c \
-#    src/bignum/bn_sqrt.c \
-#    src/bignum/bn_word.c \
-#    src/bignum/bn_x931p.c \
-#    src/bignum/bn_misc.c \
     src/alert.cpp \
     src/rules.cpp \
     src/version.cpp \
@@ -319,116 +358,14 @@ FORMS += \
     src/qt/forms/rpcconsole.ui \
     src/qt/forms/optionsdialog.ui
 
-contains(USE_QRCODE, 1) {
-HEADERS += src/qt/qrcodedialog.h
-SOURCES += src/qt/qrcodedialog.cpp
-FORMS += src/qt/forms/qrcodedialog.ui
-}
 
-contains(BITCOIN_QT_TEST, 1) {
-SOURCES += src/qt/test/test_main.cpp \
-    src/qt/test/uritests.cpp
-HEADERS += src/qt/test/uritests.h
-DEPENDPATH += src/qt/test
-QT += testlib
-TARGET = bitbar-qt_test
-DEFINES += BITCOIN_QT_TEST
-}
-
-CODECFORTR = UTF-8
-
-# for lrelease/lupdate
-# also add new translations to src/qt/bitcoin.qrc under translations/
-TRANSLATIONS = $$files(src/qt/locale/bitcoin_*.ts)
-
-isEmpty(QMAKE_LRELEASE) {
-    win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
-    else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
-}
-isEmpty(QM_DIR):QM_DIR = $$PWD/src/qt/locale
-# automatically build translations, so they can be included in resource file
-TSQM.name = lrelease ${QMAKE_FILE_IN}
-TSQM.input = TRANSLATIONS
-TSQM.output = $$QM_DIR/${QMAKE_FILE_BASE}.qm
-TSQM.commands = $$QMAKE_LRELEASE ${QMAKE_FILE_IN} -qm ${QMAKE_FILE_OUT}
-TSQM.CONFIG = no_link
-QMAKE_EXTRA_COMPILERS += TSQM
 
 # "Other files" to show in Qt Creator
 OTHER_FILES += \
     doc/*.rst doc/*.txt doc/README README.md res/bitcoin-qt.rc src/test/*.cpp src/test/*.h src/qt/test/*.cpp src/qt/test/*.h
 
-# platform specific defaults, if not overridden on command line
-isEmpty(BOOST_LIB_SUFFIX) {
-    macx:BOOST_LIB_SUFFIX = -mt
-    windows:BOOST_LIB_SUFFIX = -mgw92-mt-s-1_65
-}
-
-isEmpty(BOOST_THREAD_LIB_SUFFIX) {
-    BOOST_THREAD_LIB_SUFFIX = $$BOOST_LIB_SUFFIX
-}
-
-isEmpty(BDB_LIB_PATH) {
-    macx:BDB_LIB_PATH = /opt/local/lib/db53
-}
-
-isEmpty(BDB_LIB_SUFFIX) {
-    macx:BDB_LIB_SUFFIX = -5.3
-}
-
-isEmpty(BDB_INCLUDE_PATH) {
-    macx:BDB_INCLUDE_PATH = /opt/local/include/db53
-}
-
-isEmpty(BOOST_LIB_PATH) {
-    macx:BOOST_LIB_PATH = /opt/local/lib
-}
-
-isEmpty(BOOST_INCLUDE_PATH) {
-    macx:BOOST_INCLUDE_PATH = /opt/local/include
-}
-
-windows:DEFINES += WIN32
-windows:RC_FILE = src/qt/res/bitcoin-qt.rc
-
-windows:!contains(MINGW_THREAD_BUGFIX, 0) {
-    # At least qmake's win32-g++-cross profile is missing the -lmingwthrd
-    # thread-safety flag. GCC has -mthreads to enable this, but it doesn't
-    # work with static linking. -lmingwthrd must come BEFORE -lmingw, so
-    # it is prepended to QMAKE_LIBS_QT_ENTRY.
-    # It can be turned off with MINGW_THREAD_BUGFIX=0, just in case it causes
-    # any problems on some untested qmake profile now or in the future.
-    DEFINES += _MT
-    QMAKE_LIBS_QT_ENTRY = -lmingwthrd $$QMAKE_LIBS_QT_ENTRY
-}
-
-!windows:!macx {
-    DEFINES += LINUX
-    LIBS += -lrt
-}
-
-macx:HEADERS += src/qt/macdockiconhandler.h
-macx:OBJECTIVE_SOURCES += src/qt/macdockiconhandler.mm
-macx:LIBS += -framework Foundation -framework ApplicationServices -framework AppKit
-macx:DEFINES += MAC_OSX MSG_NOSIGNAL=0
-macx:ICON = src/qt/res/icons/bitcoin.icns
-macx:TARGET = "BitBar-Qt"
-macx:QMAKE_CFLAGS_THREAD += -pthread
-macx:QMAKE_LFLAGS_THREAD += -pthread
-macx:QMAKE_CXXFLAGS_THREAD += -pthread
-
-# Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)
-LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
-# -lgdi32 has to happen after -lcrypto (see  #681)
-windows:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
-LIBS += -lboost_system$$BOOST_LIB_SUFFIX -lboost_filesystem$$BOOST_LIB_SUFFIX -lboost_program_options$$BOOST_LIB_SUFFIX -lboost_thread$$BOOST_THREAD_LIB_SUFFIX
-windows:LIBS += -lboost_chrono$$BOOST_LIB_SUFFIX -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,--stack,16777216
-
 contains(RELEASE, 1) {
     !windows:!macx {
-        # Linux: turn dynamic linking back on for c/c++ runtime libraries
         LIBS += -Wl,-Bdynamic
     }
 }

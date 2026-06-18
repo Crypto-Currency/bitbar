@@ -15,7 +15,8 @@
 #include "checkpoints.h"
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/filesystem/convenience.hpp>
+//#include <boost/filesystem/convenience.hpp> changed to
+#include <boost/filesystem/operations.hpp>
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
@@ -172,7 +173,16 @@ bool AppInit(int argc, char* argv[])
             fprintf(stderr, "Error: Specified directory does not exist\n");
             Shutdown(NULL);
         }
-        ReadConfigFile(mapArgs, mapMultiArgs);
+        
+        try
+        {
+          ReadConfigFile(mapArgs, mapMultiArgs);
+        }
+        catch (const std::exception& e)
+        {
+          fprintf(stderr, "\nConfiguration File Error: %s\n", e.what());
+          _exit(1);
+        }
 
         if (mapArgs.count("-?") || mapArgs.count("--help"))
         {
