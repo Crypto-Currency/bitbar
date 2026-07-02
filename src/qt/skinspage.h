@@ -66,6 +66,7 @@ private:
 	void saveSettings();
 	void checkForUpdates();
 	void download(const QUrl &filename);
+  void startNextDownload();
 	boost::filesystem::path IniFile;
 	QString inipath,inifname;
 	QMainWindow fSize;
@@ -80,6 +81,7 @@ private:
 	QNetworkReply *reply;
 	QString latestNetError;
 	QString latestFileError;
+  QStringList filesToDownload;
 
 signals:
 	void error(const QString &title, const QString &message, bool modal);

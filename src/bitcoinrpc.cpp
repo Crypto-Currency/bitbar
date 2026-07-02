@@ -8,11 +8,11 @@
 #undef printf
 #include <boost/asio.hpp>
 #include <boost/asio/ip/v6_only.hpp>
-#if BOOST_VERSION >= 107000
- #include <boost/bind/bind.hpp>
-#else
- #include <boost/bind.hpp>
-#endif 
+//#if BOOST_VERSION >= 107000
+// #include <boost/bind/bind.hpp>
+//#else
+// #include <boost/bind.hpp>
+//#endif 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/iostreams/concepts.hpp>
@@ -306,7 +306,7 @@ std::vector<std::string> CRPCTable::listCommands() const
 
     std::transform( mapCommands.begin(), mapCommands.end(),
                    std::back_inserter(commandList),
-                   boost::bind(&commandMap::value_type::first,_1) );
+                   boost::bind(&commandMap::value_type::first,boost::placeholders::_1) );
     return commandList;
 }
 
@@ -812,12 +812,17 @@ void ThreadRPCServer2(void* parg)
         StartShutdown();
         fprintf(stderr, "Shutting down, please wait ");
         fflush(stderr);
-        while (true)
+        // Print exactly 10 dots (one every 500ms for a smooth 5-second thread cooldown window)
+        for (int i = 0; i < 10; i++)
         {
-          boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
-          fprintf(stderr, ".");
-          fflush(stderr);
+            boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+            fprintf(stderr, ".");
+            fflush(stderr);
         }
+        fprintf(stderr, "\n");
+
+        // Force a clean kernel-level exit to prevent any trailing thread assertions
+        _exit(1);
 //        return;
     }
 
@@ -1113,11 +1118,18 @@ void ThreadRPCServer3(void* parg)
     }
 }
 
+// by Simone: coming from db.cpp, progress of blockchain load
+extern unsigned int loadProgress;
 json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params) const
 {
-	// by Simone: check if is enabled
-	if (!enableRpcExecution)
-        throw JSONRPCError(RPC_MISC_ERROR, "Wallet is loading the blockchain, please wait");
+  // by Simone: check if is enabled
+  if (!enableRpcExecution)
+  {
+    char m[256];
+    sprintf(m, "Wallet is loading the blockchain (%d%%), please wait", loadProgress);
+    throw JSONRPCError(RPC_MISC_ERROR, m);
+  }
+
 
     // Find method
     const CRPCCommand *pcmd = tableRPC[strMethod];

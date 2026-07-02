@@ -27,6 +27,9 @@ extern CClientUIInterface uiInterface;
 
 unsigned int nWalletDBUpdated;
 
+unsigned int loadProgress;
+char pString[256];
+
 // by Simone: extend the class for conversion for >= 4.1.0.1
 class CDiskBlockIndexV3Conv : public CDiskBlockIndexV3
 {
@@ -1165,7 +1168,8 @@ bool CBlkDB::LoadBlockIndexGuts()
 			if (progress > 100) {
 				progress = 100;
 			}
-			if (progress != oldProgress) {
+			if (progress != oldProgress)
+            {
 				char pString[256];
 				if (needUpgradeV3)
 					sprintf(pString, (_("Upgrading index (%d%%)... [DO NOT INTERRUPT]")).c_str(), progress);
@@ -1174,7 +1178,8 @@ bool CBlkDB::LoadBlockIndexGuts()
 		#ifdef QT_GUI
 				uiInterface.InitMessage(pString);
 		#endif
-				oldProgress = progress;
+              loadProgress=progress;				
+              oldProgress = progress;
 			}
 			ccc += 1.0;
 

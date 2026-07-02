@@ -25,6 +25,10 @@
 #include <QDebug>
 using namespace std;
 
+QString settingsName="Bitbar";
+QString listURL="http://bitbar.co/themes/list.v2.txt";
+QString fileURL="http://bitbar.co/themes/";
+
 
 SkinsPage::SkinsPage(QWidget *parent) : QWidget(parent), ui(new Ui::SkinsPage)
 {
@@ -39,7 +43,7 @@ SkinsPage::SkinsPage(QWidget *parent) : QWidget(parent), ui(new Ui::SkinsPage)
   QPixmap downloadPixmap(":/icons/gears");
   QIcon downloadButtonIcon(downloadPixmap);
   downloadButton->setIcon(downloadButtonIcon);
-  QSettings settings("Bitbar", "settings");
+  QSettings settings(settingsName, "settings");
   inipath=GetDataDir().string().c_str();
   inipath=inipath+"/themes/";
   loadSettings();
@@ -243,13 +247,13 @@ void SkinsPage::optionChanged()
 
 void SkinsPage::saveSettings()
 {
-  QSettings settings("Bitbar", "settings");
+  QSettings settings(settingsName, "settings");
   settings.setValue("filename", inifname);
 }
 
 void SkinsPage::loadSettings()
 {
-  QSettings settings("Bitbar", "settings");
+  QSettings settings(settingsName, "settings");
   inifname=settings.value("filename", "").toString();
 }
  
@@ -279,7 +283,7 @@ void SkinsPage::resizeEvent(QResizeEvent* event)
 void SkinsPage::getlist()
 {
   // show a downloading message in status bar
-  statusLabel->setText("<b>" + tr("Downloading themes from http://bitbar.co...") + "</b>");
+  statusLabel->setText("<b>" + tr("Downloading themes...") + "</b>");
   latestNetError = "";
 
   // first, let's disable the download button (triple-clicks fanatics !)
@@ -288,8 +292,8 @@ void SkinsPage::getlist()
   connect(&manager,SIGNAL(finished(QNetworkReply*)),this,SLOT(getListFinished(QNetworkReply*)));
 
   QNetworkRequest request;
-  request.setUrl(QUrl("http://bitbar.co/themes/list.v2.txt"));
-  request.setRawHeader("User-Agent", "Wallet BTB theme request");
+  request.setUrl(QUrl(listURL));
+  request.setRawHeader("User-Agent", "Wallet theme request");
 
   networkTimer->start();
   manager.get(request);
@@ -313,7 +317,7 @@ void SkinsPage::checkForUpdates()
 // connect the event and launch it
 	connect(&manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(checkForUpdatesCore(QNetworkReply*)));
 	QNetworkRequest request;
-	request.setUrl(QUrl("http://bitbar.co/themes/list.v2.txt"));
+	request.setUrl(QUrl(listURL));
 	request.setRawHeader("User-Agent", "Wallet theme request");
 	networkTimer->start();
 	manager.get(request);
@@ -331,7 +335,7 @@ void SkinsPage::checkForUpdatesCore(QNetworkReply* reply)
 	QCryptographicHash md5_l(QCryptographicHash::Md5);
 
 // calculate the md5 of remote and local files
-	if (netHandleError(reply, "http://bitbar.co/themes/list.v2.txt"))
+	if (netHandleError(reply, listURL))
 	{
 
 	// get the remote MD5
@@ -400,7 +404,7 @@ bool SkinsPage::netHandleError(QNetworkReply* reply, QString urlDownload)
 
 void SkinsPage::getListFinished(QNetworkReply* reply)
 {
-	if (netHandleError(reply, "http://bitbar.co/themes/list.v2.txt"))
+	if (netHandleError(reply, listURL))
 	{
 		disconnect(&manager, SIGNAL(finished(QNetworkReply*)), 0, 0);  
 		connect(&manager, SIGNAL(finished(QNetworkReply*)), SLOT(downloadFinished(QNetworkReply*)));
@@ -409,7 +413,7 @@ void SkinsPage::getListFinished(QNetworkReply* reply)
 		QString line;
 
 	// saves also the descriptor, will be used to check for an new version
-		download((QString)"http://bitbar.co/themes/list.v2.txt");
+		download((QString)listURL);
 		for (int i = 0; i < list.count(); i++)
 		{
 			line=list.at(i).toLocal8Bit().constData();
@@ -420,6 +424,7 @@ void SkinsPage::getListFinished(QNetworkReply* reply)
 				if (line.startsWith("createDir::"))		// by Simone: which subfolders need to be created, are declared in the file
 				{
 					line.replace("createDir::", "");	
+printf("Creating directory:%s\n", qUtf8Printable(line));
 
 				// create dir if it doesn't exist yet
 					QDir imgdir(inipath + line);
@@ -430,15 +435,42 @@ void SkinsPage::getListFinished(QNetworkReply* reply)
 				}
 				else if (!line.startsWith("#"))			// by Simone: added comment lines, skip them
 				{  
-					download("http://bitbar.co/themes/" + line);
+printf("downloading file:%s\n", qUtf8Printable(line));
+//					download("http://themes.bitcoinfast.co/themes/" + line);
+          filesToDownload.append(fileURL + line);
 				}
 			}
 		}
+    startNextDownload();
 	}
 	else
 	{
 		reply->abort();
 	}
+}
+
+void SkinsPage::startNextDownload()
+{
+    if (filesToDownload.isEmpty())
+    {
+      statusLabel->setText("");
+
+      // Safely disconnect the finished signal
+      disconnect(&manager, SIGNAL(finished(QNetworkReply*)), 0, 0);
+
+      // Refresh the UI themes list
+      find();
+
+      emit information(tr("Themes Download"), tr("Themes were successfully downloaded and installed."));
+      return;
+    }
+
+    // Get the next URL and remove it from the list
+    QString nextUrl = filesToDownload.takeFirst();
+
+//    printf("Downloading next file: %s\n", qUtf8Printable(nextUrl));
+statusLabel->setText(tr("Downloading file %1").arg(nextUrl));
+    download(QUrl(nextUrl));
 }
 
 void SkinsPage::download(const QUrl &filename)
@@ -465,16 +497,26 @@ void SkinsPage::downloadFinished(QNetworkReply *reply)
     currentDownloads.removeAll(reply);
     reply->deleteLater();
 
+    startNextDownload();
     // when finish all, re-enable the download button and force a find
-    if (currentDownloads.isEmpty()) 
-    {
-	  statusLabel->setText("");
-      downloadButton->setEnabled(true);
-      disconnect(&manager, SIGNAL(finished(QNetworkReply*)), 0, 0);  
-      find();
-      emit information(tr("Themes Download"), tr("Themes were successfully downloaded and installed."));
-    }
+//    if (currentDownloads.isEmpty()) 
+//    {
+//	  statusLabel->setText("");
+//      downloadButton->setEnabled(true);
+//      disconnect(&manager, SIGNAL(finished(QNetworkReply*)), 0, 0);  
+//      find();
+//      emit information(tr("Themes Download"), tr("Themes were successfully downloaded and installed."));
+//    }
   }
+  else
+  {
+    // Safety check: if an error happened, clean up and move to the next file
+    // so the wallet doesn't get permanently stuck mid-sync.
+    currentDownloads.removeAll(reply);
+    reply->deleteLater();
+    startNextDownload();
+  }
+
 }
 
 bool SkinsPage::isHttpRedirect(QNetworkReply *reply)
