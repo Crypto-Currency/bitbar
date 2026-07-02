@@ -173,6 +173,7 @@ int main(int argc, char *argv[])
 //	QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 	QApplication::setStyle(QStyleFactory::create("Fusion"));
 
+    QCoreApplication::setAttribute(Qt::AA_DontUseNativeMenuBar);
     QApplication app(argc, argv);
 
     // Install global event filter that makes sure that long tooltips can be word-wrapped

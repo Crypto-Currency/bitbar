@@ -154,8 +154,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     rpcConsole(0)
 {
     resize(850, 550);
-	setMinimumWidth(850);
-	setMinimumHeight(550);
+    menuBar()->setNativeMenuBar(false);// menubar on form instead
+//	setMinimumWidth(850);
+//	setMinimumHeight(550);
 
     setWindowTitle(tr("Bitbar - Wallet  ")+QString::fromStdString(CLIENT_BUILD));
 //  setStyleSheet("");
@@ -518,6 +519,7 @@ void BitcoinGUI::createMenuBar()
 #ifdef Q_OS_MAC
     // Create a decoupled menu bar on Mac which stays even if the window is closed
     appMenuBar = new QMenuBar();
+    setMenuBar(appMenuBar);
 #else
     // Get the main window's menu bar on other platforms
     appMenuBar = menuBar();
