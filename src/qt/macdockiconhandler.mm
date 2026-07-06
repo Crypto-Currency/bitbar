@@ -1,16 +1,13 @@
+
 #include "macdockiconhandler.h"
 
 #include <QMenu>
 #include <QWidget>
-#include <QTemporaryFile>
-#include <QImageWriter>
+
+extern void qt_mac_set_dock_menu(QMenu*);
 
 #undef slots
 #include <Cocoa/Cocoa.h>
-
-#if QT_VERSION < 0x050000
-extern void qt_mac_set_dock_menu(QMenu *);
-#endif
 
 @interface DockIconClickEventHandler : NSObject
 {
@@ -41,9 +38,8 @@ extern void qt_mac_set_dock_menu(QMenu *);
     Q_UNUSED(event)
     Q_UNUSED(replyEvent)
 
-    if (dockIconHandler) {
+    if (dockIconHandler)
         dockIconHandler->handleDockIconClickEvent();
-    }
 }
 
 @end
@@ -51,26 +47,18 @@ extern void qt_mac_set_dock_menu(QMenu *);
 MacDockIconHandler::MacDockIconHandler() : QObject()
 {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
     this->m_dockIconClickEventHandler = [[DockIconClickEventHandler alloc] initWithDockIconHandler:this];
+
     this->m_dummyWidget = new QWidget();
     this->m_dockMenu = new QMenu(this->m_dummyWidget);
-    this->setMainWindow(NULL);
-#if QT_VERSION < 0x050000
     qt_mac_set_dock_menu(this->m_dockMenu);
-#endif
     [pool release];
-}
-
-void MacDockIconHandler::setMainWindow(QMainWindow *window) {
-    this->mainWindow = window;
 }
 
 MacDockIconHandler::~MacDockIconHandler()
 {
     [this->m_dockIconClickEventHandler release];
     delete this->m_dummyWidget;
-    this->setMainWindow(NULL);
 }
 
 QMenu *MacDockIconHandler::dockMenu()
@@ -81,29 +69,15 @@ QMenu *MacDockIconHandler::dockMenu()
 void MacDockIconHandler::setIcon(const QIcon &icon)
 {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    NSImage *image = nil;
+    NSImage *image;
     if (icon.isNull())
         image = [[NSImage imageNamed:@"NSApplicationIcon"] retain];
     else {
-        // generate NSImage from QIcon and use this as dock icon.
         QSize size = icon.actualSize(QSize(128, 128));
         QPixmap pixmap = icon.pixmap(size);
-
-        // write temp file hack (could also be done through QIODevice [memory])
-        QTemporaryFile notificationIconFile;
-        if (!pixmap.isNull() && notificationIconFile.open()) {
-            QImageWriter writer(&notificationIconFile, "PNG");
-            if (writer.write(pixmap.toImage())) {
-                const char *cString = notificationIconFile.fileName().toUtf8().data();
-                NSString *macString = [NSString stringWithCString:cString encoding:NSUTF8StringEncoding];
-                image =  [[NSImage alloc] initWithContentsOfFile:macString];
-            }
-        }
-
-        if(!image) {
-            // if testnet image could not be created, load std. app icon
-            image = [[NSImage imageNamed:@"NSApplicationIcon"] retain];
-        }
+        CGImageRef cgImage = pixmap.toMacCGImageRef();
+        image = [[NSImage alloc] initWithCGImage:cgImage size:NSZeroSize];
+        CFRelease(cgImage);
     }
 
     [NSApp setApplicationIconImage:image];
@@ -121,11 +95,5 @@ MacDockIconHandler *MacDockIconHandler::instance()
 
 void MacDockIconHandler::handleDockIconClickEvent()
 {
-    if (this->mainWindow)
-    {
-        this->mainWindow->activateWindow();
-        this->mainWindow->show();
-    }
-
     emit this->dockIconClicked();
 }

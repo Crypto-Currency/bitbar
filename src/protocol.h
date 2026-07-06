@@ -21,13 +21,6 @@ static inline unsigned short GetDefaultPort(const bool testnet = fTestNet)
     return testnet ? 18777 : 8777;
 }
 
-/** nServices flags */
-enum
-{
-	NODE_NONE = 0,
-    NODE_NETWORK = (1 << 0),
-};
-
 
 extern unsigned char pchMessageStart[4];
 
@@ -71,6 +64,11 @@ class CMessageHeader
         unsigned int nChecksum;
 };
 
+/** nServices flags */
+enum
+{
+    NODE_NETWORK = (1 << 0),
+};
 
 /** A CService with information about it as peer */
 class CAddress : public CService

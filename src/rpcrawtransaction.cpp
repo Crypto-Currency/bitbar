@@ -5,8 +5,6 @@
 
 #include <boost/assign/list_of.hpp>
 
-#include <openssl/ec.h> // for EC_KEY definition
-
 #include "base58.h"
 #include "bitcoinrpc.h"
 #include "db.h"
@@ -93,7 +91,7 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry)
             if (pindex->IsInMainChain())
             {
                 entry.push_back(Pair("confirmations", 1 + nBestHeight - pindex->nHeight));
-                entry.push_back(Pair("sptime", (boost::int64_t)pindex->nTime));
+                entry.push_back(Pair("time", (boost::int64_t)pindex->nTime));
                 entry.push_back(Pair("blocktime", (boost::int64_t)pindex->nTime));
             }
             else

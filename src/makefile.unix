@@ -2,12 +2,12 @@
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-USE_UPNP:=-
+USE_UPNP:=0
 USE_IPV6:=1
 
 LINK:=$(CXX)
 
-DEFS=-DBOOST_SPIRIT_THREADSAFE -DBOOST_ASIO_ENABLE_OLD_SERVICES -fPIE
+DEFS=-DBOOST_SPIRIT_THREADSAFE
 
 DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/obj $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH))
 LIBS = $(addprefix -L,$(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH))
@@ -93,21 +93,8 @@ DEBUGFLAGS=-g
 
 # CXXFLAGS can be specified on the make command line, so we use xCXXFLAGS that only
 # adds some defaults in front. Unfortunately, CXXFLAGS=... $(CXXFLAGS) does not work.
-xCXXFLAGS=-rdynamic -O2 -pthread -Wall -Wextra -Wno-format -Wno-format-security -Wno-unused-parameter -Wno-unused-variable $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CXXFLAGS) -Wno-deprecated-declarations -DBOOST_BIND_GLOBAL_PLACEHOLDERS
-
-xCFLAGS= -O2 -D_REENTRANT -Wall -W -fPIC \
-    $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CFLAGS)
-
-
-# If we have an ARM device, we can't use SSE2 instructions, so don't try to use them
-# xCPUARCH is passed in as a define (xCPUARCH=armv7l, xCPUARCH=armv6l)
-ifeq ($(xCPUARCH),armv7l)
-    xCXXFLAGS+= -DNOSSE
-else ifeq ($(xCPUARCH),armv6l)
-    xCXXFLAGS+= -DNOSSE
-else
-    xCXXFLAGS+=-msse2
-endif
+xCXXFLAGS=-O2 -msse2 -pthread -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter \
+    $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CXXFLAGS)
 
 # LDFLAGS can be specified on the make command line, so we use xLDFLAGS that only
 # adds some defaults in front. Unfortunately, LDFLAGS=... $(LDFLAGS) does not work.
@@ -115,7 +102,6 @@ xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 
 OBJS= \
     obj/alert.o \
-    obj/rules.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -145,8 +131,8 @@ OBJS= \
     obj/pbkdf2.o \
     obj/scrypt_mine.o \
     obj/scrypt-x86.o \
-    obj/scrypt-x86_64.o \
-    obj/scrypt-arm.o
+    obj/scrypt-x86_64.o
+
 
 all: bitbard
 
@@ -165,20 +151,11 @@ DEFS += -DHAVE_BUILD_INFO
 obj/scrypt-x86.o: scrypt-x86.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
-obj/scrypt-arm.o: scrypt-arm.S
-	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
-
 obj/scrypt-x86_64.o: scrypt-x86_64.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
 obj/%.o: %.cpp
 	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
-	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
-	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
-	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
-	  rm -f $(@:%.o=%.d)
-
-obj/%.o: $(CC) -c $(xCFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
 	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
 	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
 	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \

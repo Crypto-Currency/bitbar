@@ -70,7 +70,6 @@ bool fPrintToConsole = false;
 bool fPrintToDebugger = false;
 bool fRequestShutdown = false;
 bool fShutdown = false;
-bool fStartOver = false;
 bool fDaemon = false;
 bool fServer = false;
 bool fCommandLine = false;
@@ -199,6 +198,7 @@ uint256 GetRandHash()
 
 
 
+
 static FILE* fileout = NULL;
 
 inline int OutputDebugStringF(const char* pszFormat, ...)
@@ -291,7 +291,7 @@ string vstrprintf(const char *format, va_list ap)
     char* p = buffer;
     int limit = sizeof(buffer);
     int ret;
-    loop()
+    loop
     {
         va_list arg_ptr;
         va_copy(arg_ptr, ap);
@@ -351,7 +351,7 @@ void ParseString(const string& str, char c, vector<string>& v)
         return;
     string::size_type i1 = 0;
     string::size_type i2;
-    loop()
+    loop
     {
         i2 = str.find(c, i1);
         if (i2 == str.npos)
@@ -372,7 +372,7 @@ string FormatMoney(int64 n, bool fPlus)
     int64 n_abs = (n > 0 ? n : -n);
     int64 quotient = n_abs/COIN;
     int64 remainder = n_abs%COIN;
-    string str = strprintf("%" PRI64d ".%06" PRI64d, quotient, remainder);
+    string str = strprintf("%"PRI64d".%06"PRI64d, quotient, remainder);
 
     // Right-trim excess zeros before the decimal point:
     int nTrim = 0;
@@ -453,38 +453,6 @@ static const signed char phexdigit[256] =
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, };
 
-
-static const long hextable[] = 
-{
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 10-19
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 30-39
-	-1, -1, -1, -1, -1, -1, -1, -1,  0,  1,
-	 2,  3,  4,  5,  6,  7,  8,  9, -1, -1,		// 50-59
-	-1, -1, -1, -1, -1, 10, 11, 12, 13, 14,
-	15, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 70-79
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, 10, 11, 12,		// 90-99
-	13, 14, 15, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 110-109
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 130-139
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 150-159
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 170-179
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 190-199
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 210-219
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,		// 230-239
-	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1
-};
-
-
 bool IsHex(const string& str)
 {
     BOOST_FOREACH(unsigned char c, str)
@@ -499,7 +467,7 @@ vector<unsigned char> ParseHex(const char* psz)
 {
     // convert hex dump to vector
     vector<unsigned char> vch;
-    loop()
+    loop
     {
         while (isspace(*psz))
             psz++;
@@ -953,7 +921,7 @@ string DecodeBase32(const string& str)
 
 bool WildcardMatch(const char* psz, const char* mask)
 {
-    loop()
+    loop
     {
         switch (*mask)
         {
@@ -1106,7 +1074,7 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
 boost::filesystem::path GetConfigFile()
 {
     boost::filesystem::path pathConfigFile(GetArg("-conf", "bitbar.conf"));
-    if (!pathConfigFile.is_absolute()) pathConfigFile = GetDataDir(false) / pathConfigFile;
+    if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }
 
@@ -1137,7 +1105,7 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
 boost::filesystem::path GetPidFile()
 {
     boost::filesystem::path pathPidFile(GetArg("-pid", "bitbard.pid"));
-    if (!pathPidFile.is_absolute()) pathPidFile = GetDataDir() / pathPidFile;
+    if (!pathPidFile.is_complete()) pathPidFile = GetDataDir() / pathPidFile;
     return pathPidFile;
 }
 
@@ -1208,13 +1176,6 @@ void ShrinkDebugFile()
 
 
 
-int64_t GetTimeMicros()
-{
-    int64_t now = (boost::posix_time::microsec_clock::universal_time() -
-                   boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_microseconds();
-    assert(now > 0);
-    return now;
-}
 
 
 
@@ -1257,7 +1218,7 @@ void AddTimeData(const CNetAddr& ip, int64 nTime)
 
     // Add data
     vTimeOffsets.input(nOffsetSample);
-    printf("Added time data, samples %d, offset %+" PRI64d " (%+" PRI64d " minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample/60);
+    printf("Added time data, samples %d, offset %+"PRI64d" (%+"PRI64d" minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample/60);
     if (vTimeOffsets.size() >= 5 && vTimeOffsets.size() % 2 == 1)
     {
         int64 nMedian = vTimeOffsets.median();
@@ -1292,10 +1253,10 @@ void AddTimeData(const CNetAddr& ip, int64 nTime)
         }
         if (fDebug) {
             BOOST_FOREACH(int64 n, vSorted)
-                printf("%+" PRI64d "  ", n);
+                printf("%+"PRI64d"  ", n);
             printf("|  ");
         }
-        printf("nTimeOffset = %+" PRI64d "  (%+" PRI64d " minutes)\n", nTimeOffset, nTimeOffset/60);
+        printf("nTimeOffset = %+"PRI64d"  (%+"PRI64d" minutes)\n", nTimeOffset, nTimeOffset/60);
     }
 }
 
@@ -1324,7 +1285,7 @@ std::string FormatSubVersion(const std::string& name, int nClientVersion, const 
 {
     std::ostringstream ss;
     ss << "/";
-    ss << name << (fTestNet ? "-g" : "") << ":" << FormatVersion(nClientVersion);		// by Simone: in testnet add a letter, is useful to differentiate while testing
+    ss << name << ":" << FormatVersion(nClientVersion);
     if (!comments.empty())
         ss << "(" << boost::algorithm::join(comments, "; ") << ")";
     ss << "/";

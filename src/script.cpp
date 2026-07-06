@@ -8,16 +8,13 @@
 using namespace std;
 using namespace boost;
 
-#include <openssl/ec.h> // for EC_KEY definition
-
+#include "script.h"
+#include "keystore.h"
 #include "bignum.h"
+#include "key.h"
 #include "main.h"
 #include "sync.h"
 #include "util.h"
-
-#include "script.h"
-#include "keystore.h"
-#include "key.h"
 
 bool CheckSig(vector<unsigned char> vchSig, vector<unsigned char> vchPubKey, CScript scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType);
 
@@ -1260,7 +1257,7 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
         // Compare
         CScript::const_iterator pc1 = script1.begin();
         CScript::const_iterator pc2 = script2.begin();
-        loop()
+        loop
         {
             if (pc1 == script1.end() && pc2 == script2.end())
             {

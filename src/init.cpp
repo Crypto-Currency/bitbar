@@ -2,9 +2,6 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
-#include <openssl/ec.h> // for EC_KEY definition
-
 #include "db.h"
 #include "walletdb.h"
 #include "bitcoinrpc.h"
@@ -15,22 +12,17 @@
 #include "checkpoints.h"
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-//#include <boost/filesystem/convenience.hpp> changed to
-#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/convenience.hpp>
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
 
-
-//#ifndef WIN32 && __APPLE__
-#if (!defined(_WIN32)) && (!defined(WIN32)) && (!defined(__APPLE__))
+#ifndef WIN32
 #include <signal.h>
-#include <execinfo.h>
-#include <ucontext.h>
 #endif
 
 using namespace std;
-
+using namespace boost;
 
 CWallet* pwalletMain;
 CClientUIInterface uiInterface;
@@ -59,15 +51,13 @@ void StartShutdown()
 #endif
 }
 
-extern CTxDB *gtxdb;
 void Shutdown(void* parg)
 {
     static CCriticalSection cs_Shutdown;
     static bool fTaken;
 
     // Make this thread recognisable as the shutdown thread
-	// By Simone: changed the thread name to bitbar- instead of bitcoin-
-    RenameThread("bitbar-shutoff");
+    RenameThread("bitcoin-shutoff");
 
     bool fFirstThread = false;
     {
@@ -85,44 +75,14 @@ void Shutdown(void* parg)
         nTransactionsUpdated++;
         bitdb.Flush(false);
         StopNode();
-	    UnregisterNodeSignals(GetNodeSignals());
-		if (gtxdb) {
-			gtxdb->Close();
-		}
         bitdb.Flush(true);
         boost::filesystem::remove(GetPidFile());
         UnregisterWallet(pwalletMain);
         delete pwalletMain;
         NewThread(ExitTimeout, NULL);
         Sleep(50);
-        printf("Bitbar exited\n\n");
+        printf("BitBar exited\n\n");
         fExit = true;
-		fShutdown = false;
-
-	// by Simone: if the fStartOver flag is raised, we dump all the blockchain files securely after the database is close and detached
-		if (fStartOver)
-		{
-			boost::filesystem::path p = GetDataDir();
-			boost::filesystem::directory_iterator end_itr;
-			for (boost::filesystem::directory_iterator itr(p / "database"); itr != end_itr; ++itr)
-			{
-				boost::filesystem::remove(*itr);
-			}
-			boost::filesystem::remove(p / "database");
-			for (int i = 1; ; i++)
-			{
-				char s[64];
-				sprintf(s, "blk%04d.dat", i);
-				if (!boost::filesystem::exists(p / s))
-				{
-					break;
-				}
-				boost::filesystem::remove(p / s);
-			}
-			boost::filesystem::remove(p / "blkindex.dat");
-			boost::filesystem::remove(p / "txindex.dat");
-		}
-
 #ifndef QT_GUI
         // ensure non-UI client gets exited here, but let Bitcoin-Qt reach 'return 0;' in bitcoin.cpp
         exit(0);
@@ -161,8 +121,6 @@ bool AppInit(int argc, char* argv[])
     bool fRet = false;
     try
     {
-
-
         //
         // Parameters
         //
@@ -173,21 +131,12 @@ bool AppInit(int argc, char* argv[])
             fprintf(stderr, "Error: Specified directory does not exist\n");
             Shutdown(NULL);
         }
-        
-        try
-        {
-          ReadConfigFile(mapArgs, mapMultiArgs);
-        }
-        catch (const std::exception& e)
-        {
-          fprintf(stderr, "\nConfiguration File Error: %s\n", e.what());
-          _exit(1);
-        }
+        ReadConfigFile(mapArgs, mapMultiArgs);
 
         if (mapArgs.count("-?") || mapArgs.count("--help"))
         {
             // First part of help message is specific to bitcoind / RPC client
-            std::string strUsage = _("Bitbar version") + " " + FormatFullVersion() + "\n\n" +
+            std::string strUsage = _("BitBar version") + " " + FormatFullVersion() + "\n\n" +
                 _("Usage:") + "\n" +
                   "  bitbard [options]                     " + "\n" +
                   "  bitbard [options] <command> [params]  " + _("Send command to -server or bitbard") + "\n" +
@@ -242,13 +191,13 @@ int main(int argc, char* argv[])
 
 bool static InitError(const std::string &str)
 {
-    uiInterface.ThreadSafeMessageBox(str, _("Bitbar"), CClientUIInterface::OK | CClientUIInterface::MODAL);
+    uiInterface.ThreadSafeMessageBox(str, _("BitBar"), CClientUIInterface::OK | CClientUIInterface::MODAL);
     return false;
 }
 
 bool static InitWarning(const std::string &str)
 {
-    uiInterface.ThreadSafeMessageBox(str, _("Bitbar"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
+    uiInterface.ThreadSafeMessageBox(str, _("BitBar"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
     return true;
 }
 
@@ -293,7 +242,6 @@ std::string HelpMessage()
         "  -listen                " + _("Accept connections from outside (default: 1 if no -proxy or -connect)") + "\n" +
         "  -bind=<addr>           " + _("Bind to given address. Use [host]:port notation for IPv6") + "\n" +
         "  -dnsseed               " + _("Find peers using DNS lookup (default: 0)") + "\n" +
-        "  -nosynccheckpoints     " + _("Disable sync checkpoints (default: 0)") + "\n" +
         "  -banscore=<n>          " + _("Threshold for disconnecting misbehaving peers (default: 100)") + "\n" +
         "  -bantime=<n>           " + _("Number of seconds to keep misbehaving peers from reconnecting (default: 86400)") + "\n" +
         "  -maxreceivebuffer=<n>  " + _("Maximum per-connection receive buffer, <n>*1000 bytes (default: 5000)") + "\n" +
@@ -314,7 +262,6 @@ std::string HelpMessage()
         "  -daemon                " + _("Run in the background as a daemon and accept commands") + "\n" +
 #endif
         "  -testnet               " + _("Use the test network") + "\n" +
-        "  -netoffline            " + _("Starts with the wallet offline (default: starts online)") + "\n" +
         "  -debug                 " + _("Output extra debugging information. Implies all other -debug* options") + "\n" +
         "  -debugnet              " + _("Output extra network debugging information") + "\n" +
         "  -logtimestamps         " + _("Prepend debug output with timestamp") + "\n" +
@@ -325,16 +272,16 @@ std::string HelpMessage()
 #endif
         "  -rpcuser=<user>        " + _("Username for JSON-RPC connections") + "\n" +
         "  -rpcpassword=<pw>      " + _("Password for JSON-RPC connections") + "\n" +
-        "  -rpcport=<port>        " + _("Listen for JSON-RPC connections on <port> (default: 9344 or testnet: 19344)") + "\n" +
+        "  -rpcport=<port>        " + _("Listen for JSON-RPC connections on <port> (default: 8344 or testnet: 18344)") + "\n" +
         "  -rpcallowip=<ip>       " + _("Allow JSON-RPC connections from specified IP address") + "\n" +
         "  -rpcconnect=<ip>       " + _("Send commands to node running on <ip> (default: 127.0.0.1)") + "\n" +
         "  -blocknotify=<cmd>     " + _("Execute command when the best block changes (%s in cmd is replaced by block hash)") + "\n" +
-		"  -walletnotify=<cmd>    " + _("Execute command when a wallet transaction changes (%s in cmd is replaced by TxID)") + "\n" +
         "  -upgradewallet         " + _("Upgrade wallet to latest format") + "\n" +
         "  -keypool=<n>           " + _("Set key pool size to <n> (default: 100)") + "\n" +
         "  -rescan                " + _("Rescan the block chain for missing wallet transactions") + "\n" +
         "  -salvagewallet         " + _("Attempt to recover private keys from a corrupt wallet.dat") + "\n" +
-        "  -zapwallettxes  " + _("Delete all wallet transactions and only recover those parts of the blockchain through -rescan on startup") + "\n" +
+        "  -staking               " + _("turn staking off (default =1") + "\n" +
+        "  -zapwallettxes         " + _("Delete all wallet transactions and only recover those parts of the blockchain through -rescan on startup") + "\n" +
         "  -checkblocks=<n>       " + _("How many blocks to check at startup (default: 2500, 0 = all)") + "\n" +
         "  -checklevel=<n>        " + _("How thorough the block verification is (0-6, default: 1)") + "\n" +
         "  -loadblock=<file>      " + _("Imports blocks from external blk000?.dat file") + "\n" +
@@ -353,87 +300,11 @@ std::string HelpMessage()
     return strUsage;
 }
 
-// by Simone: before doing anything, let's capture this status
-bool txIndexFileExists = true;
-
-// by Simone: core dump handler
-//#ifndef WIN32
-#if (!defined(_WIN32)) && (!defined(WIN32)) && (!defined(__APPLE__))
-/* This structure mirrors the one found in /usr/include/asm/ucontext.h */
-typedef struct _sig_ucontext {
- unsigned long     uc_flags;
- struct ucontext   *uc_link;
- stack_t           uc_stack;
- struct sigcontext uc_mcontext;
- sigset_t          uc_sigmask;
-} sig_ucontext_t;
-
-void crit_err_hdlr(int sig_num, siginfo_t * info, void * ucontext)
-{
- void *             array[50];
- void *             caller_address;
- char **            messages;
- int                size, i;
- sig_ucontext_t *   uc;
-
- uc = (sig_ucontext_t *)ucontext;
-
- /* Get the address at the time the signal was raised */
-#if defined(__i386__) // gcc specific
- caller_address = (void *) uc->uc_mcontext.eip; // EIP: x86 specific
-#elif defined(__x86_64__) // gcc specific
- caller_address = (void *) uc->uc_mcontext.rip; // RIP: x86_64 specific
-#elif defined(__arm__)   // gcc specific
- caller_address = (void *) uc->uc_mcontext.arm_ip;	// ARM specific
-#else
- caller_address = NULL;
-#endif
-
- fprintf(stderr, "signal %d (%s), address is %p from %p\n", 
-  sig_num, strsignal(sig_num), info->si_addr, 
-  (void *)caller_address);
-
- size = backtrace(array, 50);
-
- /* overwrite sigaction with caller's address */
- array[1] = caller_address;
-
- messages = backtrace_symbols(array, size);
-
- /* skip first stack frame (points here) */
- for (i = 1; i < size && messages != NULL; ++i)
- {
-  fprintf(stderr, "[bt]: (%d) %s\n", i, messages[i]);
- }
-
- free(messages);
-
- exit(EXIT_FAILURE);
-}
-#endif
-
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
 bool AppInit2()
 {
-//#ifndef WIN32
-#if (!defined(_WIN32)) && (!defined(WIN32)) && (!defined(__APPLE__))
-	// by Simone: adding core dumps handler, at least in Linux
-	struct sigaction sigact;
-
-	sigact.sa_sigaction = crit_err_hdlr;
-	sigact.sa_flags = SA_RESTART | SA_SIGINFO;
-
-	if (sigaction(SIGSEGV, &sigact, (struct sigaction *)NULL) != 0)
-	{
-		fprintf(stderr, "error setting signal handler for %d (%s)\n",
-		SIGSEGV, strsignal(SIGSEGV));
-
-		exit(EXIT_FAILURE);
-	}
-#endif
-
     // ********************************************************* Step 1: setup
 #ifdef _MSC_VER
     // Turn off Microsoft heap dump noise
@@ -457,9 +328,7 @@ bool AppInit2()
     PSETPROCDEPPOL setProcDEPPol = (PSETPROCDEPPOL)GetProcAddress(GetModuleHandleA("Kernel32.dll"), "SetProcessDEPPolicy");
     if (setProcDEPPol != NULL) setProcDEPPol(PROCESS_DEP_ENABLE);
 #endif
-//#ifndef WIN32
-#if (!defined(_WIN32)) && (!defined(WIN32)) && (!defined(__APPLE__))
-
+#ifndef WIN32
     umask(077);
 
     // Clean shutdown on SIGTERM
@@ -483,10 +352,6 @@ bool AppInit2()
 
     fTestNet = GetBoolArg("-testnet");
     fStaking = GetBoolArg("-staking",true);
-
-	extern bool netOffline;
-	netOffline = GetBoolArg("-netoffline", false);
-	setOnlineStatus(!netOffline);
 
     if (mapArgs.count("-bind")) {
         // when specifying an explicit binding address, you want to listen on it
@@ -589,7 +454,7 @@ bool AppInit2()
     if (file) fclose(file);
     static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
     if (!lock.try_lock())
-        return InitError(strprintf(_("Cannot obtain a lock on data directory %s.  Bitbar is probably already running."), strDataDir.c_str()));
+        return InitError(strprintf(_("Cannot obtain a lock on data directory %s.  BitBar is probably already running."), strDataDir.c_str()));
 
 #if !defined(WIN32) && !defined(QT_GUI)
     if (fDaemon)
@@ -613,43 +478,31 @@ bool AppInit2()
     }
 #endif
 
-
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    printf("Bitbar version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
+    printf("BitBar version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
     if (!fLogTimestamps)
         printf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
     printf("Used data directory %s\n", strDataDir.c_str());
     //check for themes directory, and create if missing
-    if (!boost::filesystem::exists(GetDataDir() / "themes"))
+    if (!filesystem::exists(GetDataDir() / "themes"))
     {
       boost::filesystem::path temppath;
       temppath = GetDataDir() / "themes";
-      boost::filesystem::create_directory(temppath);
+      filesystem::create_directory(temppath);
       printf("created themes directory %s\n", temppath.string().c_str());
       temppath = GetDataDir() / "themes/images";
-      boost::filesystem::create_directory(temppath);
+      filesystem::create_directory(temppath);
       printf("created themes directory %s\n", temppath.string().c_str());
     }
 
     std::ostringstream strErrors;
 
-
-	// by Simone: we check if the file txindex.dat exists, otherwise we need to create it from the old index, the guts will take care of it
-	boost::filesystem::path path = GetDataDir() / "txindex.dat";
-	boost::filesystem::path pathBlk = GetDataDir() / "blkindex.dat";
-	if ((!boost::filesystem::exists(path)) && (boost::filesystem::exists(pathBlk)))
-	{
-		boost::filesystem::path pathOld = GetDataDir() / "blkindex.dat";
-		boost::filesystem::rename(pathOld, path);
-		txIndexFileExists = false;
-	}
-
     if (fDaemon)
-        fprintf(stdout, "Bitbar server starting\n");
+        fprintf(stdout, "BitBar server starting\n");
 
     int64 nStart;
 
@@ -672,7 +525,7 @@ bool AppInit2()
             return false;
     }
 
-    if (boost::filesystem::exists(GetDataDir() / "wallet.dat"))
+    if (filesystem::exists(GetDataDir() / "wallet.dat"))
     {
         CDBEnv::VerifyResult r = bitdb.Verify("wallet.dat", CWalletDB::Recover);
         if (r == CDBEnv::RECOVER_OK)
@@ -681,15 +534,13 @@ bool AppInit2()
                                      " Original wallet.dat saved as wallet.{timestamp}.bak in %s; if"
                                      " your balance or transactions are incorrect you should"
                                      " restore from a backup."), strDataDir.c_str());
-            uiInterface.ThreadSafeMessageBox(msg, _("Bitbar"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
+            uiInterface.ThreadSafeMessageBox(msg, _("BitBar"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
         }
         if (r == CDBEnv::RECOVER_FAIL)
             return InitError(_("wallet.dat corrupt, salvage failed"));
     }
 
     // ********************************************************* Step 6: network initialization
-
-    RegisterNodeSignals(GetNodeSignals());
 
     int nSocksVersion = GetArg("-socks", 5);
 
@@ -821,42 +672,19 @@ bool AppInit2()
         return InitError(msg);
     }
 
-	// by Simone: start RPC server before loading the blockchain
-	if (fServer)
-      	NewThread(ThreadRPCServer, NULL);
-
     if (GetBoolArg("-loadblockindextest"))
     {
         CTxDB txdb("r");
-        txdb.blkDb->LoadBlockIndex();
+        txdb.LoadBlockIndex();
         PrintBlockTree();
         return false;
     }
 
-	// by Simone: put this here, otherwise the rule file doesn't load in testnet !
-    if (fTestNet)
-    {
-        pchMessageStart[0] = 0xcd;
-        pchMessageStart[1] = 0xf2;
-        pchMessageStart[2] = 0xc0;
-        pchMessageStart[3] = 0xef;
-	}
-
-	// by Simone: load rules here, exit on failure
-    uiInterface.InitMessage(_("Loading PALADIN rules..."));
-	CDiskRules rules;
-	CRulesDB rdb;
-	if (!rdb.Read(rules))
-		return InitError(_("Error loading PALADIN rules"));
-
     uiInterface.InitMessage(_("Loading block index..."));
     printf("Loading block index...\n");
     nStart = GetTimeMillis();
-	if (!LoadBlockIndex())
-		return InitError(_("Error loading blkindex.dat"));
-
-	// by Simone: set generic rules once immediately after loading the index
-	CRules::parseGenericRules(nBestHeight);
+    if (!LoadBlockIndex())
+        return InitError(_("Error loading blkindex.dat"));
 
     // as LoadBlockIndex can take several minutes, it's possible the user
     // requested to kill bitcoin-qt during the last operation. If so, exit.
@@ -866,7 +694,7 @@ bool AppInit2()
         printf("Shutdown requested. Exiting.\n");
         return false;
     }
-    printf(" block index %15" PRI64d "ms\n", GetTimeMillis() - nStart);
+    printf(" block index %15"PRI64d"ms\n", GetTimeMillis() - nStart);
 
     if (GetBoolArg("-printblockindex") || GetBoolArg("-printblocktree"))
     {
@@ -902,11 +730,7 @@ bool AppInit2()
     // needed to restore wallet transaction meta data after -zapwallettxes
     std::vector<CWalletTx> vWtx;
 
-    if (GetBoolArg("-zapwallettxes", false))
-    {
-      //debug
-      printf("running zapwallettxes from startup.\n");
-
+    if (GetBoolArg("-zapwallettxes", false)) {
         uiInterface.InitMessage(_("Zapping all transactions from wallet..."));
         printf("Zapping all transactions from wallet...\n");
 
@@ -936,20 +760,20 @@ bool AppInit2()
         {
             string msg(_("Warning: error reading wallet.dat! All keys read correctly, but transaction data"
                          " or address book entries might be missing or incorrect."));
-            uiInterface.ThreadSafeMessageBox(msg, _("Bitbar"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
+            uiInterface.ThreadSafeMessageBox(msg, _("BitBar"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
         }
         else if (nLoadWalletRet == DB_TOO_NEW)
-            strErrors << _("Error loading wallet.dat: Wallet requires newer version of Bitbar") << "\n";
+            strErrors << _("Error loading wallet.dat: Wallet requires newer version of BitBar") << "\n";
         else if (nLoadWalletRet == DB_NEED_REWRITE)
         {
-            strErrors << _("Wallet needed to be rewritten: restart Bitbar to complete") << "\n";
+            strErrors << _("Wallet needed to be rewritten: restart BitBar to complete") << "\n";
             printf("%s", strErrors.str().c_str());
             return InitError(strErrors.str());
         }
         else
             strErrors << _("Error loading wallet.dat") << "\n";
     }
-    
+
     if (GetBoolArg("-upgradewallet", fFirstRun))
     {
         int nMaxVersion = GetArg("-upgradewallet", 0);
@@ -980,45 +804,51 @@ bool AppInit2()
     }
 
     printf("%s", strErrors.str().c_str());
-    printf(" wallet      %15" PRI64d "ms\n", GetTimeMillis() - nStart);
+    printf(" wallet      %15"PRI64d"ms\n", GetTimeMillis() - nStart);
 
     RegisterWallet(pwalletMain);
 
     CBlockIndex *pindexRescan = pindexBest;
     if (GetBoolArg("-rescan"))
-	{
         pindexRescan = pindexGenesisBlock;
-	}
+    else
+    {
+        CWalletDB walletdb("wallet.dat");
+        CBlockLocator locator;
+        if (walletdb.ReadBestBlock(locator))
+            pindexRescan = locator.GetBlockIndex();
+    }
     if (pindexBest != pindexRescan && pindexBest && pindexRescan && pindexBest->nHeight > pindexRescan->nHeight)
     {
         uiInterface.InitMessage(_("Rescanning..."));
         printf("Rescanning last %i blocks (from block %i)...\n", pindexBest->nHeight - pindexRescan->nHeight, pindexRescan->nHeight);
         nStart = GetTimeMillis();
         pwalletMain->ScanForWalletTransactions(pindexRescan, true);
-        printf(" rescan      %15" PRI64d "ms\n", GetTimeMillis() - nStart);
+        printf(" rescan      %15"PRI64d"ms\n", GetTimeMillis() - nStart);
+
         nWalletDBUpdated++;
 
         // Restore wallet transaction metadata after -zapwallettxes
         if (GetBoolArg("-zapwallettxes", false))
         {
-          BOOST_FOREACH(const CWalletTx& wtxOld, vWtx)
-          {
-            uint256 hash = wtxOld.GetHash();
-            std::map<uint256, CWalletTx>::iterator mi = pwalletMain->mapWallet.find(hash);
-            if (mi != pwalletMain->mapWallet.end())
+            BOOST_FOREACH(const CWalletTx& wtxOld, vWtx)
             {
-              const CWalletTx* copyFrom = &wtxOld;
-              CWalletTx* copyTo = &mi->second;
-              copyTo->mapValue = copyFrom->mapValue;
-              copyTo->vOrderForm = copyFrom->vOrderForm;
-              copyTo->nTimeReceived = copyFrom->nTimeReceived;
-              copyTo->nTimeSmart = copyFrom->nTimeSmart;
-              copyTo->fFromMe = copyFrom->fFromMe;
-              copyTo->strFromAccount = copyFrom->strFromAccount;
-              copyTo->nOrderPos = copyFrom->nOrderPos;
-              copyTo->WriteToDisk();
+                uint256 hash = wtxOld.GetHash();
+                std::map<uint256, CWalletTx>::iterator mi = pwalletMain->mapWallet.find(hash);
+                if (mi != pwalletMain->mapWallet.end())
+                {
+                    const CWalletTx* copyFrom = &wtxOld;
+                    CWalletTx* copyTo = &mi->second;
+                    copyTo->mapValue = copyFrom->mapValue;
+                    copyTo->vOrderForm = copyFrom->vOrderForm;
+                    copyTo->nTimeReceived = copyFrom->nTimeReceived;
+                    copyTo->nTimeSmart = copyFrom->nTimeSmart;
+                    copyTo->fFromMe = copyFrom->fFromMe;
+                    copyTo->strFromAccount = copyFrom->strFromAccount;
+                    copyTo->nOrderPos = copyFrom->nOrderPos;
+                    copyTo->WriteToDisk();
+                }
             }
-          }
         }
     }
 
@@ -1036,11 +866,13 @@ bool AppInit2()
         }
     }
 
-    boost::filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
-    if (boost::filesystem::exists(pathBootstrap)) {
+    filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
+    if (filesystem::exists(pathBootstrap)) {
+        uiInterface.InitMessage(_("Importing bootstrap blockchain data file."));
+
         FILE *file = fopen(pathBootstrap.string().c_str(), "rb");
         if (file) {
-            boost::filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
+            filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
             LoadExternalBlockFile(file);
             RenameOver(pathBootstrap, pathBootstrapOld);
         }
@@ -1058,7 +890,7 @@ bool AppInit2()
             printf("Invalid or missing peers.dat; recreating\n");
     }
 
-    printf("Loaded %i addresses from peers.dat  %" PRI64d "ms\n",
+    printf("Loaded %i addresses from peers.dat  %"PRI64d"ms\n",
            addrman.size(), GetTimeMillis() - nStart);
 
     // ********************************************************* Step 11: start node
@@ -1069,22 +901,21 @@ bool AppInit2()
     RandAddSeedPerfmon();
 
     //// debug print
-    printf("mapBlockIndex.size() = %" PRIszu "\n",   mapBlockIndex.size());
+    printf("mapBlockIndex.size() = %"PRIszu"\n",   mapBlockIndex.size());
     printf("nBestHeight = %d\n",            nBestHeight);
-    printf("setKeyPool.size() = %" PRIszu "\n",      pwalletMain->setKeyPool.size());
-    printf("mapWallet.size() = %" PRIszu "\n",       pwalletMain->mapWallet.size());
-    printf("mapAddressBook.size() = %" PRIszu "\n",  pwalletMain->mapAddressBook.size());
+    printf("setKeyPool.size() = %"PRIszu"\n",      pwalletMain->setKeyPool.size());
+    printf("mapWallet.size() = %"PRIszu"\n",       pwalletMain->mapWallet.size());
+    printf("mapAddressBook.size() = %"PRIszu"\n",  pwalletMain->mapAddressBook.size());
 
-	if (!NewThread(StartNode, NULL))
-		InitError(_("Error: could not start node"));
+    if (!NewThread(StartNode, NULL))
+        InitError(_("Error: could not start node"));
 
-	// by Simone: starting the RPC thread was here, instead we just unleash it
-	enableRpcExecution = true;
+    if (fServer)
+        NewThread(ThreadRPCServer, NULL);
 
     // ********************************************************* Step 12: finished
 
     uiInterface.InitMessage(_("Done loading"));
-
     printf("Done loading\n");
 
     if (!strErrors.str().empty())

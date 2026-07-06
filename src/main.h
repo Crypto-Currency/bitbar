@@ -50,17 +50,11 @@ static const uint256 hashGenesisBlockTestNet ("0x00000b03a8fb08c5fc7c876f73c224a
 
 static const int64 nMaxClockDrift = 2 * 60 * 60;        // two hours
 
-// by Simone: new variables that are dynamicized with PALADIN system
-extern int nPaladinRuleHeight;
-extern bool nPowSuspended;
-extern bool nPosSuspended;
-//extern int64 nMaxClockDrift;
-//extern int64 nMintProofOfStake;
-//extern int64 nPowReward;
-extern unsigned int nStakeTargetSpacing;
-extern bool nPaladinOnlyClients;
-
 extern CScript COINBASE_FLAGS;
+
+
+
+
 
 
 extern CCriticalSection cs_main;
@@ -94,11 +88,6 @@ extern int64 nTransactionFee;
 // Minimum disk space required - used in CheckDiskSpace()
 static const uint64 nMinDiskSpace = 52428800;
 
-/** Register with a network node to receive its signals */
-void RegisterNodeSignals(CNodeSignals& nodeSignals);
-/** Unregister a network node */
-void UnregisterNodeSignals(CNodeSignals& nodeSignals);
-
 
 class CReserveKey;
 class CTxDB;
@@ -131,7 +120,6 @@ unsigned int GetStakeMaxAge(unsigned int nTime);
 unsigned int ComputeMinWork(unsigned int nBase, int64 nTime);
 int GetNumBlocksOfPeers();
 bool IsInitialBlockDownload();
-bool IsInitialRuleDownload();
 std::string GetWarnings(std::string strFor);
 bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock);
 uint256 WantedByOrphan(const CBlock* pblockOrphan);
@@ -139,13 +127,13 @@ const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfSta
 void BitcoinMiner(CWallet *pwallet, bool fProofOfStake);
 void ResendWalletTransactions();
 
-struct CNodeStateStats {
-    int nMisbehavior;
-    int nSyncHeight;
-    int nCommonHeight;
-    std::vector<int> vHeightInFlight;
-};
-bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats);
+
+
+
+
+
+
+
 
 
 bool GetWalletFile(CWallet* pwallet, std::string &strWalletFileOut);
@@ -661,7 +649,7 @@ public:
     {
         std::string str;
         str += IsCoinBase()? "Coinbase" : (IsCoinStake()? "Coinstake" : "CTransaction");
-        str += strprintf("(hash=%s, nTime=%d, ver=%d, vin.size=%" PRIszu", vout.size=%" PRIszu", nLockTime=%d)\n",
+        str += strprintf("(hash=%s, nTime=%d, ver=%d, vin.size=%"PRIszu", vout.size=%"PRIszu", nLockTime=%d)\n",
             GetHash().ToString().substr(0,10).c_str(),
             nTime,
             nVersion,
@@ -956,7 +944,7 @@ public:
             printf("GetStakeEntropyBit: hashSig=%s", hashSig.ToString().c_str());
         hashSig >>= 159; // take the first bit of the hash
         if (fDebug && GetBoolArg("-printstakemodifier"))
-            printf(" entropybit=% " PRI64d"\n", hashSig.Get64());
+            printf(" entropybit=%"PRI64d"\n", hashSig.Get64());
         return hashSig.Get64();
     }
 
@@ -1092,7 +1080,7 @@ public:
 
     void print() const
     {
-        printf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu", vchBlockSig=%s)\n",
+        printf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%"PRIszu", vchBlockSig=%s)\n",
             GetHash().ToString().substr(0,20).c_str(),
             nVersion,
             hashPrevBlock.ToString().substr(0,20).c_str(),
@@ -1355,7 +1343,7 @@ public:
 
     std::string ToString() const
     {
-        return strprintf("CBlockIndex(nprev=%p, pnext=%p, nFile=%u, nBlockPos=%-6d nHeight=%d, nMint=%s, nMoneySupply=%s, nFlags=(%s)(%d)(%s), nStakeModifier=%016 " PRI64x", nStakeModifierChecksum=%08x, hashProofOfStake=%s, prevoutStake=(%s), nStakeTime=%d merkle=%s, hashBlock=%s)",
+        return strprintf("CBlockIndex(nprev=%p, pnext=%p, nFile=%u, nBlockPos=%-6d nHeight=%d, nMint=%s, nMoneySupply=%s, nFlags=(%s)(%d)(%s), nStakeModifier=%016"PRI64x", nStakeModifierChecksum=%08x, hashProofOfStake=%s, prevoutStake=(%s), nStakeTime=%d merkle=%s, hashBlock=%s)",
             pprev, pnext, nFile, nBlockPos, nHeight,
             FormatMoney(nMint).c_str(), FormatMoney(nMoneySupply).c_str(),
             GeneratedStakeModifier() ? "MOD" : "-", GetStakeEntropyBit(), IsProofOfStake()? "PoS" : "PoW",
@@ -1459,189 +1447,6 @@ public:
 };
 
 
-/** by Simone: v2, we cache also the hash directly, it saves a lot of resources around the code */
-class CDiskBlockIndexV2 : public CBlockIndex
-{
-public:
-	uint256 hash;
-    uint256 hashPrev;
-    uint256 hashNext;
-
-    CDiskBlockIndexV2()
-    {
-        hash = 0;
-        hashPrev = 0;
-        hashNext = 0;
-    }
-
-    explicit CDiskBlockIndexV2(CBlockIndex* pindex) : CBlockIndex(*pindex)
-    {
-		hash = pindex->GetBlockHash();
-        hashPrev = (pprev ? pprev->GetBlockHash() : 0);
-        hashNext = (pnext ? pnext->GetBlockHash() : 0);
-    }
-
-    IMPLEMENT_SERIALIZE
-    (
-        if (!(nType & SER_GETHASH))
-            READWRITE(nVersion);
-
-        READWRITE(hashNext);
-        READWRITE(nFile);
-        READWRITE(nBlockPos);
-        READWRITE(nHeight);
-        READWRITE(nMint);
-        READWRITE(nMoneySupply);
-        READWRITE(nFlags);
-        READWRITE(nStakeModifier);
-        if (IsProofOfStake())
-        {
-            READWRITE(prevoutStake);
-            READWRITE(nStakeTime);
-            READWRITE(hashProofOfStake);
-        }
-        else if (fRead)
-        {
-            const_cast<CDiskBlockIndexV2*>(this)->prevoutStake.SetNull();
-            const_cast<CDiskBlockIndexV2*>(this)->nStakeTime = 0;
-            const_cast<CDiskBlockIndexV2*>(this)->hashProofOfStake = 0;
-        }
-
-        // block header
-        READWRITE(this->nVersion);
-        READWRITE(hashPrev);
-        READWRITE(hashMerkleRoot);
-        READWRITE(nTime);
-        READWRITE(nBits);
-        READWRITE(nNonce);
-
-		// add the hash of the current block
-		READWRITE(hash);
-    )
-
-    uint256 GetBlockHash() const
-    {
-	    CBlock block;
-	    block.nVersion        = nVersion;
-	    block.hashPrevBlock   = hashPrev;
-	    block.hashMerkleRoot  = hashMerkleRoot;
-	    block.nTime           = nTime;
-	    block.nBits           = nBits;
-	    block.nNonce          = nNonce;
-	    return (hash != 0) ? hash : block.GetHash();
-    }
-
-
-    std::string ToString() const
-    {
-        std::string str = "CDiskBlockIndexV2(";
-        str += CBlockIndex::ToString();
-        str += strprintf("\n                hashBlock=%s, hashPrev=%s, hashNext=%s)",
-            GetBlockHash().ToString().c_str(),
-            hashPrev.ToString().c_str(),
-            hashNext.ToString().c_str());
-        return str;
-    }
-
-    void print() const
-    {
-        printf("%s\n", ToString().c_str());
-    }
-};
-
-/** by Simone: v3, we cache also other stuff, saving a loads of time at boot */
-class CDiskBlockIndexV3 : public CBlockIndex
-{
-public:
-	uint256 hash;
-    uint256 hashPrev;
-    uint256 hashNext;
-
-    CDiskBlockIndexV3()
-    {
-        hash = 0;
-        hashPrev = 0;
-        hashNext = 0;
-    }
-
-    explicit CDiskBlockIndexV3(CBlockIndex* pindex) : CBlockIndex(*pindex)
-    {
-		hash = pindex->GetBlockHash();
-        hashPrev = (pprev ? pprev->GetBlockHash() : 0);
-        hashNext = (pnext ? pnext->GetBlockHash() : 0);
-    }
-
-    IMPLEMENT_SERIALIZE
-    (
-        if (!(nType & SER_GETHASH))
-            READWRITE(nVersion);
-
-        READWRITE(hashNext);
-        READWRITE(nFile);
-        READWRITE(nBlockPos);
-        READWRITE(nHeight);
-        READWRITE(nMint);
-        READWRITE(nMoneySupply);
-        READWRITE(nFlags);
-        READWRITE(nStakeModifier);
-        if (IsProofOfStake())
-        {
-            READWRITE(prevoutStake);
-            READWRITE(nStakeTime);
-            READWRITE(hashProofOfStake);
-        }
-        else if (fRead)
-        {
-            const_cast<CDiskBlockIndexV3*>(this)->prevoutStake.SetNull();
-            const_cast<CDiskBlockIndexV3*>(this)->nStakeTime = 0;
-            const_cast<CDiskBlockIndexV3*>(this)->hashProofOfStake = 0;
-        }
-
-        // block header
-        READWRITE(this->nVersion);
-        READWRITE(hashPrev);
-        READWRITE(hashMerkleRoot);
-        READWRITE(nTime);
-        READWRITE(nBits);
-        READWRITE(nNonce);
-
-		// add the hash of the current block
-		READWRITE(hash);
-
-		// add the last two missing variables
-		READWRITE(nStakeModifierChecksum);
-		READWRITE(bnChainTrust);
-    )
-
-    uint256 GetBlockHash() const
-    {
-	    CBlock block;
-	    block.nVersion        = nVersion;
-	    block.hashPrevBlock   = hashPrev;
-	    block.hashMerkleRoot  = hashMerkleRoot;
-	    block.nTime           = nTime;
-	    block.nBits           = nBits;
-	    block.nNonce          = nNonce;
-	    return (hash != 0) ? hash : block.GetHash();
-    }
-
-
-    std::string ToString() const
-    {
-        std::string str = "CDiskBlockIndexV2(";
-        str += CBlockIndex::ToString();
-        str += strprintf("\n                hashBlock=%s, hashPrev=%s, hashNext=%s)",
-            GetBlockHash().ToString().c_str(),
-            hashPrev.ToString().c_str(),
-            hashNext.ToString().c_str());
-        return str;
-    }
-
-    void print() const
-    {
-        printf("%s\n", ToString().c_str());
-    }
-};
 
 
 

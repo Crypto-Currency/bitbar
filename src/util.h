@@ -12,9 +12,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #else
-#ifndef WIN64
 typedef int pid_t; /* define for Windows compatibility */
-#endif
 #endif
 #include <map>
 #include <vector>
@@ -37,7 +35,7 @@ typedef unsigned long long  uint64;
 static const int64 COIN = 1000000;
 static const int64 CENT = 10000;
 
-#define loop()				for(;;)
+#define loop                for (;;)
 #define BEGIN(a)            ((char*)&(a))
 #define END(a)              ((char*)&((&(a))[1]))
 #define UBEGIN(a)           ((unsigned char*)&(a))
@@ -49,15 +47,15 @@ static const int64 CENT = 10000;
 #define UINTBEGIN(a)        ((uint32_t*)&(a))
 #define CUINTBEGIN(a)        ((const uint32_t*)&(a))
 
-#ifndef  PRI64d 
+#ifndef PRI64d
 #if defined(_MSC_VER) || defined(__MSVCRT__)
-#define  PRI64d   "I64d"
+#define PRI64d  "I64d"
 #define PRI64u  "I64u"
-#define  PRI64x   "I64x"
+#define PRI64x  "I64x"
 #else
-#define  PRI64d   "lld"
+#define PRI64d  "lld"
 #define PRI64u  "llu"
-#define  PRI64x   "llx"
+#define PRI64x  "llx"
 #endif
 #endif
 
@@ -151,7 +149,6 @@ extern bool fPrintToConsole;
 extern bool fPrintToDebugger;
 extern bool fRequestShutdown;
 extern bool fShutdown;
-extern bool fStartOver;
 extern bool fDaemon;
 extern bool fServer;
 extern bool fCommandLine;
@@ -161,10 +158,6 @@ extern bool fStaking;
 extern bool fNoListen;
 extern bool fLogTimestamps;
 extern bool fReopenDebugLog;
-
-// by Simone: net offline status
-extern bool netOffline;
-bool setOnlineStatus(bool online);
 
 void RandAddSeed();
 void RandAddSeedPerfmon();
@@ -233,11 +226,9 @@ void ShrinkDebugFile();
 int GetRandInt(int nMax);
 uint64 GetRand(uint64 nMax);
 uint256 GetRandHash();
-int64_t GetTimeMicros();
 int64 GetTime();
 void SetMockTime(int64 nMockTimeIn);
 int64 GetAdjustedTime();
-long hex2long(const char* hexString);
 std::string FormatFullVersion();
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);
 void AddTimeData(const CNetAddr& ip, int64 nTime);
@@ -253,7 +244,7 @@ void runCommand(std::string strCommand);
 
 inline std::string i64tostr(int64 n)
 {
-    return strprintf("%" PRI64d, n);
+    return strprintf("%"PRI64d, n);
 }
 
 inline std::string itostr(int n)
@@ -540,6 +531,7 @@ inline uint160 Hash160(const std::vector<unsigned char>& vch)
     return hash2;
 }
 
+
 /** Median filter over a stream of values.
  * Returns the median of the last N numbers
  */
@@ -549,22 +541,14 @@ private:
     std::vector<T> vValues;
     std::vector<T> vSorted;
     unsigned int nSize;
-	T iniValue;
-
 public:
     CMedianFilter(unsigned int size, T initial_value):
         nSize(size)
     {
         vValues.reserve(size);
-		iniValue = initial_value;
+        vValues.push_back(initial_value);
         vSorted = vValues;
     }
-
-    void clear()
-	{
-		vValues.clear();
-        vSorted = vValues;
-	}
 
     void input(T value)
     {
@@ -582,10 +566,7 @@ public:
     T median() const
     {
         int size = vSorted.size();
-        if (size == 0)
-		{
-			return 0;
-		}
+        assert(size>0);
         if(size & 1) // Odd number of elements
         {
             return vSorted[size/2];

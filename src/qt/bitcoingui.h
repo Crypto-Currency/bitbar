@@ -3,9 +3,6 @@
 
 #include <QMainWindow>
 #include <QSystemTrayIcon>
-#include <QDialog>
-#include <QLabel>
-#include <QSessionManager>
 
 #include "util.h" // for uint64
 
@@ -16,8 +13,6 @@ class TransactionView;
 class OverviewPage;
 class AddressBookPage;
 class SkinsPage;
-class DustingGui;
-class AlertGui;
 class SendCoinsDialog;
 class SignVerifyMessageDialog;
 class Notificator;
@@ -32,38 +27,7 @@ class QModelIndex;
 class QProgressBar;
 class QStackedWidget;
 class QUrl;
-class QDialog;
 QT_END_NAMESPACE
-
-// added by Simone
-class ClickableLabel : public QLabel { 
-    Q_OBJECT 
-
-public:
-    explicit ClickableLabel(QWidget* parent = 0, Qt::WindowFlags f = Qt::WindowFlags());
-    ~ClickableLabel();
-
-signals:
-    void clicked();
-
-protected:
-    void mousePressEvent(QMouseEvent* event);
-
-};
-
-// by Simone: "Shutdown" window
-class ShutdownWindow : public QWidget
-{
-	Q_OBJECT
-
-public:
-    ShutdownWindow(QWidget *parent=0, Qt::WindowFlags = Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint | Qt::WindowStaysOnTopHint);
-    void showShutdownWindow();
-
-protected:
-    void closeEvent(QCloseEvent *event);
-};
-
 
 /**
   Bitcoin GUI main class. This class represents the main window of the Bitcoin UI. It communicates with both the client and
@@ -85,7 +49,7 @@ public:
         functionality.
     */
     void setWalletModel(WalletModel *walletModel);
-	void loadSkin();
+    void loadSkin();
 
 protected:
     void changeEvent(QEvent *e);
@@ -101,15 +65,12 @@ private:
 
     OverviewPage *overviewPage;
     QWidget *transactionsPage;
-	SkinsPage *skinsPage;
-	DustingGui *dustingPage;
-	AlertGui *alertPage;
+    SkinsPage *skinsPage;
     AddressBookPage *addressBookPage;
     AddressBookPage *receiveCoinsPage;
     SendCoinsDialog *sendCoinsPage;
     SignVerifyMessageDialog *signVerifyMessageDialog;
 
-    ClickableLabel *labelOnlineIcon;
     QLabel *labelEncryptionIcon;
     QLabel *labelMintingIcon;
     QLabel *labelConnectionsIcon;
@@ -123,13 +84,10 @@ private:
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
-	QAction *skinsPageAction;
-	QAction *alertsPageAction;
-	QAction *dustingPageAction;
-	QAction* openConfigAction;
+    QAction *skinsPageAction;
+    QAction* openConfigAction;
     QAction *signMessageAction;
     QAction *verifyMessageAction;
-    QAction *startOverAction;
     QAction *aboutAction;
     QAction *receiveCoinsAction;
     QAction *optionsAction;
@@ -165,12 +123,8 @@ private:
     /** Create system tray (notification) icon */
     void createTrayIcon();
 
-	// handle online label message in a common way
-	void onlineLabelMsg(bool sts);
 
 public slots:
-
-// by Simone, make this public
     void splashMessage(const std::string &message, bool quickSleep = false);
 
     /** Set number of connections shown in the UI */
@@ -193,22 +147,12 @@ public slots:
       @param[in] nFeeRequired       the required fee
       @param[out] payFee            true to pay the fee, false to not pay the fee
     */
-
-	// by Simone, a simple info box without critical error icon...............................  and a status bar message
     void information(const QString &title, const QString &message);
     void status(const QString &message);
     void askFee(qint64 nFeeRequired, bool *payFee);
     void handleURI(QString strURI);
 
 private slots:
-
-	// by Simone: session commit data signal
-	void walletCommitData(QSessionManager& manager);
-	void aboutToQuit();
-
-	// by Simone: label online clicked, will set to go offline
-	void labelOnlineClicked();
-
     /** Switch to overview (home) page */
     void gotoOverviewPage();
     /** Switch to history (transactions) page */
@@ -217,10 +161,6 @@ private slots:
     void gotoAddressBookPage();
     /** Switch to skins page */
     void gotoSkinsPage();
-    /** Switch to dusting page */
-    void gotoDustingPage();
-    /** Switch to alert page */
-    void gotoAlertsPage();
     // Open bitbar.conf
     void openConfig();
     /** Switch to receive coins page */
@@ -258,15 +198,13 @@ private slots:
 
     /** zap the wallet */
     void zapWallet();
+
     /** Backup the wallet */
     void backupWallet();
     /** Change encrypted wallet passphrase */
     void changePassphrase();
     /** Ask for passphrase to unlock wallet temporarily */
     void unlockWallet();
-
-    /** Starts over with the chain */
-    void startOver();
 
     /** Show window if hidden, unminimize when minimized, rise when obscured or show if hidden and fToggleHidden is true */
     void showNormalIfMinimized(bool fToggleHidden = false);
