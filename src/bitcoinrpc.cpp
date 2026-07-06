@@ -14,7 +14,7 @@
 #undef printf
 #include <boost/asio.hpp>
 #include <boost/asio/ip/v6_only.hpp>
-#include <boost/bind.hpp>
+//#include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/iostreams/concepts.hpp>
@@ -359,7 +359,7 @@ static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
             "HTTP/1.1 %d %s\r\n"
             "Date: %s\r\n"
             "Connection: %s\r\n"
-            "Content-Length: %"PRIszu"\r\n"
+            "Content-Length: %" PRIszu "\r\n"
             "Content-Type: application/json\r\n"
             "Server: bitbar-json-rpc/%s\r\n"
             "\r\n"
@@ -561,10 +561,18 @@ public:
     }
     bool connect(const std::string& server, const std::string& port)
     {
-        ip::tcp::resolver resolver(stream.get_io_service());
-        ip::tcp::resolver::query query(server.c_str(), port.c_str());
-        ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-        ip::tcp::resolver::iterator end;
+//        boost::asio::ip::tcp::resolver resolver(stream.get_io_service());
+        boost::asio::ip::tcp::resolver resolver(GetIOService(stream));
+
+#if BOOST_VERSION >= 106600L
+        boost::asio::ip::tcp::resolver::results_type::iterator endpoint_iterator = resolver.resolve(server.c_str(), port.c_str()).begin();
+        boost::asio::ip::tcp::resolver::results_type::iterator end;
+#else
+        boost::asio::ip::tcp::resolver::query query(server.c_str(), port.c_str());
+        boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+        boost::asio::ip::tcp::resolver::iterator end;
+#endif
+
         boost::system::error_code error = asio::error::host_not_found;
         while (error && endpoint_iterator != end)
         {
@@ -667,7 +675,13 @@ static void RPCListen(boost::shared_ptr< basic_socket_acceptor<Protocol, SocketA
                    const bool fUseSSL)
 {
     // Accept connection
-    AcceptedConnectionImpl<Protocol>* conn = new AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
+#if BOOST_VERSION >= 106600L
+    AcceptedConnectionImpl<Protocol>* conn = new AcceptedConnectionImpl<Protocol>(
+        (boost::asio::io_context&)acceptor->get_executor().context(), context, fUseSSL);
+#else
+    AcceptedConnectionImpl<Protocol>* conn = new AcceptedConnectionImpl<Protocol>(
+        GetIOServiceFromPtr(acceptor), context, fUseSSL);
+#endif
 
     acceptor->async_accept(
             conn->sslStream.lowest_layer(),
@@ -757,25 +771,39 @@ void ThreadRPCServer2(void* parg)
 
     const bool fUseSSL = GetBoolArg("-rpcssl");
 
-    asio::io_service io_service;
+//    asio::io_service io_service;
 
+    // BOOST 1.66 require old asio interface and syntax is different too
+#if BOOST_VERSION >= 106600L
+    asio::io_context io_service;
+    ssl::context context(ssl::context::sslv23);
+#else
+    asio::io_service io_service;
     ssl::context context(io_service, ssl::context::sslv23);
+#endif
+
     if (fUseSSL)
     {
         context.set_options(ssl::context::no_sslv2);
 
-        filesystem::path pathCertFile(GetArg("-rpcsslcertificatechainfile", "server.cert"));
-        if (!pathCertFile.is_complete()) pathCertFile = filesystem::path(GetDataDir()) / pathCertFile;
-        if (filesystem::exists(pathCertFile)) context.use_certificate_chain_file(pathCertFile.string());
+        boost::filesystem::path pathCertFile(GetArg("-rpcsslcertificatechainfile", "server.cert"));
+        if (!pathCertFile.is_complete()) pathCertFile = boost::filesystem::path(GetDataDir()) / pathCertFile;
+        if (boost::filesystem::exists(pathCertFile)) context.use_certificate_chain_file(pathCertFile.string());
         else printf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
 
-        filesystem::path pathPKFile(GetArg("-rpcsslprivatekeyfile", "server.pem"));
-        if (!pathPKFile.is_complete()) pathPKFile = filesystem::path(GetDataDir()) / pathPKFile;
-        if (filesystem::exists(pathPKFile)) context.use_private_key_file(pathPKFile.string(), ssl::context::pem);
+        boost::filesystem::path pathPKFile(GetArg("-rpcsslprivatekeyfile", "server.pem"));
+        if (!pathPKFile.is_complete()) pathPKFile = boost::filesystem::path(GetDataDir()) / pathPKFile;
+        if (boost::filesystem::exists(pathPKFile)) context.use_private_key_file(pathPKFile.string(), ssl::context::pem);
         else printf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
 
         string strCiphers = GetArg("-rpcsslciphers", "TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH");
+    // BOOST 1.66 require old asio interface and syntax is different too
+#if BOOST_VERSION >= 106600L
+        SSL_CTX_set_cipher_list(context.native_handle(), strCiphers.c_str());
+#else
         SSL_CTX_set_cipher_list(context.impl(), strCiphers.c_str());
+#endif
+
     }
 
     // Try a dual IPv6/IPv4 socket, falling back to separate IPv4 and IPv6 sockets
@@ -798,7 +826,11 @@ void ThreadRPCServer2(void* parg)
         acceptor->set_option(boost::asio::ip::v6_only(loopback), v6_only_error);
 
         acceptor->bind(endpoint);
-        acceptor->listen(socket_base::max_connections);
+#if BOOST_VERSION >= 106600L
+        acceptor->listen(boost::asio::socket_base::max_listen_connections);
+#else
+        acceptor->listen(boost::asio::socket_base::max_connections);
+#endif
 
         RPCListen(acceptor, context, fUseSSL);
         // Cancel outstanding listen-requests for this acceptor when shutting down
@@ -824,7 +856,11 @@ void ThreadRPCServer2(void* parg)
             acceptor->open(endpoint.protocol());
             acceptor->set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
             acceptor->bind(endpoint);
-            acceptor->listen(socket_base::max_connections);
+#if BOOST_VERSION >= 106600L
+            acceptor->listen(boost::asio::socket_base::max_listen_connections);
+#else
+            acceptor->listen(boost::asio::socket_base::max_connections);
+#endif
 
             RPCListen(acceptor, context, fUseSSL);
             // Cancel outstanding listen-requests for this acceptor when shutting down
@@ -1068,8 +1104,17 @@ Object CallRPC(const string& strMethod, const Array& params)
 
     // Connect to localhost
     bool fUseSSL = GetBoolArg("-rpcssl");
+//    asio::io_service io_service;
+
+    // BOOST 1.66 require old asio interface and syntax is different too
+#if BOOST_VERSION >= 106600L
+    asio::io_context io_service;
+    ssl::context context(ssl::context::sslv23);
+#else
     asio::io_service io_service;
     ssl::context context(io_service, ssl::context::sslv23);
+#endif
+
     context.set_options(ssl::context::no_sslv2);
     asio::ssl::stream<asio::ip::tcp::socket> sslStream(io_service, context);
     SSLIOStreamDevice<asio::ip::tcp> d(sslStream, fUseSSL);
