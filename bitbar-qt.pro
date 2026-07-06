@@ -1,14 +1,14 @@
 TEMPLATE = app
 TARGET = bitbar-qt
-VERSION = 0.8.0
+VERSION = 0.8.2.1
+
 INCLUDEPATH += src src/json src/qt
 
 DEFINES -= USE_UPNP
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
 CONFIG += thread -w
-QT += widgets
-QT += network
+QT += widgets network
 
 OBJECTS_DIR = build
 MOC_DIR = build
@@ -18,6 +18,8 @@ CODECFORTR = UTF-8
 # System Architecture Targeting & Static Toolchain Linkage
 win32 {
     CONFIG += static
+    CONFIG += no_plugin_manifest
+
     DEFINES += _WINDOWS WIN32 _MT
     DEFINES += BITCOIN_NEED_QT_PLUGINS
 
@@ -41,17 +43,24 @@ win32 {
 }
 
 !win32 {
-    # Linux and Unix Native Platform Enforcements
-    QMAKE_CXXFLAGS *= -fstack-protector-all --param ssp-buffer-size=1 -DBOOST_BIND_GLOBAL_PLACEHOLDERS
-    QMAKE_LFLAGS *= -rdynamic -fstack-protector-all --param ssp-buffer-size=1
-    !macx {
-        DEFINES += LINUX
-        LIBS += -lrt
-        QMAKE_LFLAGS *= -no-pie
-    }
-    contains(RELEASE, 1) {
-        LIBS += -Wl,-Bstatic
-    }
+  # Linux and Unix Native Platform Enforcements
+  DEFINES += BITCOIN_NEED_QT_PLUGINS 
+  QTPLUGIN += qwebp
+  
+  QMAKE_CXXFLAGS *= -fstack-protector-all --param ssp-buffer-size=1 -DBOOST_BIND_GLOBAL_PLACEHOLDERS
+  QMAKE_LFLAGS *= -rdynamic -fstack-protector-all --param ssp-buffer-size=1
+  !macx {
+    DEFINES += LINUX
+        
+    # Explicitly pull in your Ubuntu dynamic system libraries here:
+    LIBS += -lboost_system -lboost_filesystem -lboost_thread -lboost_program_options -lboost_chrono
+    LIBS += -ldb_cxx -lssl -lcrypto -lrt
+    LIBS += -lwebp        
+    QMAKE_LFLAGS *= -no-pie
+  }
+  contains(RELEASE, 1) {
+    LIBS += -Wl,-Bstatic
+  }
 }
 
 # Mac Build Framework Targets
@@ -141,8 +150,6 @@ macx {
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 14.0
 }
 
-
-
 # Optional Feature: QRCode Support
 contains(USE_QRCODE, 1) {
     message(Building with QRCode support)
@@ -179,10 +186,6 @@ contains(FIRST_CLASS_MESSAGING, 1) {
     DEFINES += FIRST_CLASS_MESSAGING
 }
 
-contains(BITCOIN_NEED_QT_PLUGINS, 1) {
-    DEFINES += BITCOIN_NEED_QT_PLUGINS
-    QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
-}
 
 # Optional Unit Testing Mechanics
 contains(BITCOIN_QT_TEST, 1) {
@@ -229,8 +232,19 @@ DEPENDPATH += src src/json src/qt
 
 # Core Application File Tree Array Targets
 HEADERS += src/qt/bitcoingui.h \
+    src/qt/transactiontablemodel.h \
+    src/qt/addresstablemodel.h \
+    src/qt/optionsdialog.h \
+    src/qt/sendcoinsdialog.h \
+    src/qt/coincontroldialog.h \
+    src/qt/coincontroltreewidget.h \
+    src/qt/addressbookpage.h \
+    src/qt/signverifymessagedialog.h \
+    src/qt/aboutdialog.h \
+    src/qt/splash.h \
+    src/qt/editaddressdialog.h \
+    src/qt/bitcoinaddressvalidator.h \
     src/alert.h \
-    src/rules.h \
     src/addrman.h \
     src/base58.h \
     src/bignum.h \
@@ -252,18 +266,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/walletdb.h \
     src/script.h \
     src/init.h \
-	src/qt/skinspage.h \
+    src/qt/skinspage.h \
     src/mruset.h \
-    src/wallet.h \
-    src/keystore.h \
-    src/bitcoinrpc.h \
-    src/crypter.h \
-    src/protocol.h \
-    src/version.h \
-    src/netbase.h \
-    src/clientversion.h \
-    src/allocators.h \
-    src/ui_interface.h \
     src/json/json_spirit_writer_template.h \
     src/json/json_spirit_writer.h \
     src/json/json_spirit_value.h \
@@ -273,18 +277,6 @@ HEADERS += src/qt/bitcoingui.h \
     src/json/json_spirit_reader.h \
     src/json/json_spirit_error_position.h \
     src/json/json_spirit.h \
-    src/qt/transactiontablemodel.h \
-    src/qt/addresstablemodel.h \
-    src/qt/optionsdialog.h \
-    src/qt/sendcoinsdialog.h \
-    src/qt/coincontroldialog.h \
-    src/qt/coincontroltreewidget.h \
-    src/qt/addressbookpage.h \
-    src/qt/signverifymessagedialog.h \
-    src/qt/aboutdialog.h \
-    src/qt/splash.h \
-    src/qt/editaddressdialog.h \
-    src/qt/bitcoinaddressvalidator.h \
     src/qt/clientmodel.h \
     src/qt/guiutil.h \
     src/qt/transactionrecord.h \
@@ -294,60 +286,36 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/transactiondesc.h \
     src/qt/transactiondescdialog.h \
     src/qt/bitcoinamountfield.h \
+    src/wallet.h \
+    src/keystore.h \
     src/qt/transactionfilterproxy.h \
     src/qt/transactionview.h \
     src/qt/walletmodel.h \
+    src/bitcoinrpc.h \
     src/qt/overviewpage.h \
     src/qt/csvmodelwriter.h \
+    src/crypter.h \
     src/qt/sendcoinsentry.h \
     src/qt/qvalidatedlineedit.h \
     src/qt/bitcoinunits.h \
     src/qt/qvaluecombobox.h \
     src/qt/askpassphrasedialog.h \
+    src/protocol.h \
     src/qt/notificator.h \
     src/qt/qtipcserver.h \
+    src/allocators.h \
+    src/ui_interface.h \
     src/qt/rpcconsole.h \
-	src/qt/trafficgraphwidget.h \
-	src/qt/bantablemodel.h \
-	src/qt/peertablemodel.h \
-	src/qt/dustinggui.h \
-	src/qt/alertgui.h
+    src/version.h \
+    src/netbase.h \
+    src/clientversion.h \
+#    src/qt/trafficgraphwidget.h \
+#    src/qt/bantablemodel.h \
+#    src/qt/peertablemodel.h \
+#    src/qt/dustinggui.h \
+#    src/qt/alertgui.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
-    src/alert.cpp \
-    src/rules.cpp \
-    src/version.cpp \
-    src/sync.cpp \
-    src/util.cpp \
-    src/netbase.cpp \
-    src/key.cpp \
-    src/script.cpp \
-    src/main.cpp \
-    src/init.cpp \
-    src/net.cpp \
-	src/qt/skinspage.cpp \
-    src/checkpoints.cpp \
-    src/addrman.cpp \
-    src/db.cpp \
-    src/walletdb.cpp \
-    src/wallet.cpp \
-    src/keystore.cpp \
-    src/rpcdump.cpp \
-    src/rpcnet.cpp \
-    src/rpcmining.cpp \
-    src/rpcwallet.cpp \
-    src/rpcblockchain.cpp \
-    src/rpcrawtransaction.cpp \
-    src/bitcoinrpc.cpp \
-    src/crypter.cpp \
-    src/noui.cpp \
-    src/kernel.cpp \
-    src/scrypt-x86.S \
-    src/scrypt-x86_64.S \
-    src/scrypt-arm.S \
-    src/scrypt_mine.cpp \
-    src/pbkdf2.cpp \
-    src/protocol.cpp \
     src/qt/transactiontablemodel.cpp \
     src/qt/addresstablemodel.cpp \
     src/qt/optionsdialog.cpp \
@@ -360,6 +328,21 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/splash.cpp \
     src/qt/editaddressdialog.cpp \
     src/qt/bitcoinaddressvalidator.cpp \
+    src/alert.cpp \
+    src/version.cpp \
+    src/sync.cpp \
+    src/util.cpp \
+    src/netbase.cpp \
+    src/key.cpp \
+    src/script.cpp \
+    src/main.cpp \
+    src/init.cpp \
+    src/net.cpp \
+    src/qt/skinspage.cpp \
+    src/checkpoints.cpp \
+    src/addrman.cpp \
+    src/db.cpp \
+    src/walletdb.cpp \
     src/qt/clientmodel.cpp \
     src/qt/guiutil.cpp \
     src/qt/transactionrecord.cpp \
@@ -369,27 +352,44 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/transactiondescdialog.cpp \
     src/qt/bitcoinstrings.cpp \
     src/qt/bitcoinamountfield.cpp \
+    src/wallet.cpp \
+    src/keystore.cpp \
     src/qt/transactionfilterproxy.cpp \
     src/qt/transactionview.cpp \
     src/qt/walletmodel.cpp \
+    src/bitcoinrpc.cpp \
+    src/rpcdump.cpp \
+    src/rpcnet.cpp \
+    src/rpcmining.cpp \
+    src/rpcwallet.cpp \
+    src/rpcblockchain.cpp \
+    src/rpcrawtransaction.cpp \
     src/qt/overviewpage.cpp \
     src/qt/csvmodelwriter.cpp \
+    src/crypter.cpp \
     src/qt/sendcoinsentry.cpp \
     src/qt/qvalidatedlineedit.cpp \
     src/qt/bitcoinunits.cpp \
     src/qt/qvaluecombobox.cpp \
     src/qt/askpassphrasedialog.cpp \
+    src/protocol.cpp \
     src/qt/notificator.cpp \
     src/qt/qtipcserver.cpp \
     src/qt/rpcconsole.cpp \
-	src/qt/trafficgraphwidget.cpp \
-	src/qt/bantablemodel.cpp \
-	src/qt/peertablemodel.cpp \
-	src/qt/dustinggui.cpp \
-	src/qt/alertgui.cpp
+    src/noui.cpp \
+    src/kernel.cpp \
+    src/scrypt-x86.S \
+    src/scrypt-x86_64.S \
+#    src/scrypt-arm.S \
+    src/scrypt_mine.cpp \
+    src/pbkdf2.cpp \
+#    src/qt/trafficgraphwidget.cpp \
+#    src/qt/bantablemodel.cpp \
+#    src/qt/peertablemodel.cpp \
+#    src/qt/dustinggui.cpp \
+#    src/qt/alertgui.cpp
 
-RESOURCES += \
-    src/qt/bitcoin.qrc
+RESOURCES += src/qt/bitcoin.qrc
 
 FORMS += \
     src/qt/forms/sendcoinsdialog.ui \
@@ -398,16 +398,16 @@ FORMS += \
     src/qt/forms/signverifymessagedialog.ui \
     src/qt/forms/aboutdialog.ui \
     src/qt/forms/splash.ui \
-	src/qt/forms/skinspage.ui \
-	src/qt/forms/dustinggui.ui \
-	src/qt/forms/alertgui.ui \
+    src/qt/forms/skinspage.ui \
+#    src/qt/forms/dustinggui.ui \
+#    src/qt/forms/alertgui.ui \
     src/qt/forms/editaddressdialog.ui \
+    src/qt/forms/optionsdialog.ui \
+    src/qt/forms/rpcconsole.ui \
     src/qt/forms/transactiondescdialog.ui \
     src/qt/forms/overviewpage.ui \
     src/qt/forms/sendcoinsentry.ui \
-    src/qt/forms/askpassphrasedialog.ui \
-    src/qt/forms/rpcconsole.ui \
-    src/qt/forms/optionsdialog.ui
+    src/qt/forms/askpassphrasedialog.ui
 
 
 

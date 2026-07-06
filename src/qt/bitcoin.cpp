@@ -21,15 +21,11 @@
 #include <QSplashScreen>
 #include <QLibraryInfo>
 
-#if defined(BITCOIN_NEED_QT_PLUGINS) && !defined(_BITCOIN_QT_PLUGINS_INCLUDED)
+#if defined(BITCOIN_NEED_QT_PLUGINS) && !defined(_BITCOIN_QT_PLUGINS_INCLUDED) && !defined(LINUX)
 #define _BITCOIN_QT_PLUGINS_INCLUDED
 #define __INSURE__
 #include <QtPlugin>
-Q_IMPORT_PLUGIN(qcncodecs)
-Q_IMPORT_PLUGIN(qjpcodecs)
-Q_IMPORT_PLUGIN(qtwcodecs)
-Q_IMPORT_PLUGIN(qkrcodecs)
-Q_IMPORT_PLUGIN(qtaccessiblewidgets)
+Q_IMPORT_PLUGIN(QWebpPlugin)
 #endif
 
 // Need a global reference for the notifications to find the GUI
@@ -118,10 +114,11 @@ int main(int argc, char *argv[])
     ipcScanRelay(argc, argv);
 
     // Internal string conversion is all UTF-8
-    QTextCodec::setCodecForTr(QTextCodec::codecForName("UTF-8"));
-    QTextCodec::setCodecForCStrings(QTextCodec::codecForTr());
+//    QTextCodec::setCodecForTr(QTextCodec::codecForName("UTF-8"));
+//    QTextCodec::setCodecForCStrings(QTextCodec::codecForTr());
 
     Q_INIT_RESOURCE(bitcoin);
+    QCoreApplication::setAttribute(Qt::AA_DontUseNativeMenuBar);
     QApplication app(argc, argv);
 
     // Install global event filter that makes sure that long tooltips can be word-wrapped

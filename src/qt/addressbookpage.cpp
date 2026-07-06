@@ -130,14 +130,18 @@ void AddressBookPage::setModel(AddressTableModel *model)
     }
     ui->tableView->setModel(proxyModel);
     ui->tableView->setAlternatingRowColors(true);
-    ui->tableView->setStyleSheet("QTableView{alternate-background-color: rgba(200,133,0,50); background-color: rgba(200,133,0,50); selection-background-color: rgb(250,167,0);} QToolTip {background-color:rgb(255,233,142); color:black; border: 2px solid grey; padding:2px 10px 2px 10px} QHeaderView::section{background-color:#f6e89c;} QMenu{padding: 2px 10px 2px 10px;background-color:rgb(235,227,181);border:2px solid grey}");
     ui->tableView->sortByColumn(0, Qt::AscendingOrder);
 
     // Set column widths
     ui->tableView->horizontalHeader()->resizeSection(
             AddressTableModel::Address, 320);
+#if QT_VERSION < 0x050000
     ui->tableView->horizontalHeader()->setResizeMode(
             AddressTableModel::Label, QHeaderView::Stretch);
+#else
+    ui->tableView->horizontalHeader()->setSectionResizeMode(
+            AddressTableModel::Label, QHeaderView::Stretch);
+#endif
 
     connect(ui->tableView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
             this, SLOT(selectionChanged()));

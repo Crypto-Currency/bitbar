@@ -22,7 +22,7 @@ BEGIN
             VALUE "FileDescription",    "BitBar-Qt (OSS GUI client for BitBar)"
             VALUE "FileVersion",        VER_FILEVERSION_STR
             VALUE "InternalName",       "bitbar-qt"
-            VALUE "LegalCopyright",     "2009-2012 The Bitcoin developers, 2012-2013 Novacoin & PPCoin developers, 2013 BitBar developers"
+            VALUE "LegalCopyright",     "2009-2012 The Bitcoin developers, 2012-2013 Novacoin & PPCoin developers, 2016-2026 BitBar developers"
             VALUE "LegalTrademarks1",   "Distributed under the MIT/X11 software license, see the accompanying file COPYING or http://www.opensource.org/licenses/mit-license.php."
             VALUE "OriginalFilename",   "bitbar-qt.exe"
             VALUE "ProductName",        "BitBar-Qt"

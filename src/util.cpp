@@ -291,7 +291,7 @@ string vstrprintf(const char *format, va_list ap)
     char* p = buffer;
     int limit = sizeof(buffer);
     int ret;
-    loop
+    for(;;)
     {
         va_list arg_ptr;
         va_copy(arg_ptr, ap);
@@ -351,7 +351,7 @@ void ParseString(const string& str, char c, vector<string>& v)
         return;
     string::size_type i1 = 0;
     string::size_type i2;
-    loop
+    for(;;)
     {
         i2 = str.find(c, i1);
         if (i2 == str.npos)
@@ -467,7 +467,7 @@ vector<unsigned char> ParseHex(const char* psz)
 {
     // convert hex dump to vector
     vector<unsigned char> vch;
-    loop
+    for(;;)
     {
         while (isspace(*psz))
             psz++;
@@ -921,7 +921,7 @@ string DecodeBase32(const string& str)
 
 bool WildcardMatch(const char* psz, const char* mask)
 {
-    loop
+    for(;;)
     {
         switch (*mask)
         {
