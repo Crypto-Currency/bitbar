@@ -512,16 +512,31 @@ void ErrorReply(std::ostream& stream, const Object& objError, const Value& id)
 bool ClientAllowed(const boost::asio::ip::address& address)
 {
     // Make sure that IPv4-compatible and IPv4-mapped IPv6 addresses are treated as IPv4 addresses
-    if (address.is_v6()
-     && (address.to_v6().is_v4_compatible()
-      || address.to_v6().is_v4_mapped()))
-        return ClientAllowed(address.to_v6().to_v4());
+#if BOOST_VERSION >= 106600L
+  if (address.is_v6())
+  {
+    boost::asio::ip::address_v6 ipv6 = address.to_v6();
+    if (ipv6.is_v4_mapped())
+    {
+      return ClientAllowed(boost::asio::ip::make_address_v4(boost::asio::ip::v4_mapped, ipv6));
+    }
+  }
+#else
+  if (address.is_v6() && (address.to_v6().is_v4_compatible() || address.to_v6().is_v4_mapped()))
+    return ClientAllowed(address.to_v6().to_v4());
+#endif
 
-    if (address == asio::ip::address_v4::loopback()
+  std::string ipv4addr = address.to_string();
+
+  if (address == asio::ip::address_v4::loopback()
      || address == asio::ip::address_v6::loopback()
      || (address.is_v4()
          // Check whether IPv4 addresses match 127.0.0.0/8 (loopback subnet)
-      && (address.to_v4().to_ulong() & 0xff000000) == 0x7f000000))
+#if BOOST_VERSION >= 106600L
+     && (address.to_v4().to_uint() & 0xff000000) == 0x7f000000))
+#else
+     && (address.to_v4().to_ulong() & 0xff000000) == 0x7f000000))
+#endif
         return true;
 
     const string strAddress = address.to_string();
@@ -608,8 +623,13 @@ class AcceptedConnectionImpl : public AcceptedConnection
 {
 public:
     AcceptedConnectionImpl(
-            asio::io_service& io_service,
-            ssl::context &context,
+#if BOOST_VERSION >= 106600L
+    asio::io_context& io_service,
+#else
+    asio::io_service& io_service,
+#endif
+    boost::asio::ssl::context& context,
+//            ssl::context &context,
             bool fUseSSL) :
         sslStream(io_service, context),
         _d(sslStream, fUseSSL),
@@ -804,12 +824,12 @@ void ThreadRPCServer2(void* parg)
         context.set_options(ssl::context::no_sslv2);
 
         boost::filesystem::path pathCertFile(GetArg("-rpcsslcertificatechainfile", "server.cert"));
-        if (!pathCertFile.is_complete()) pathCertFile = boost::filesystem::path(GetDataDir()) / pathCertFile;
+        if (!pathCertFile.is_absolute()) pathCertFile = boost::filesystem::path(GetDataDir()) / pathCertFile;
         if (boost::filesystem::exists(pathCertFile)) context.use_certificate_chain_file(pathCertFile.string());
         else printf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
 
         boost::filesystem::path pathPKFile(GetArg("-rpcsslprivatekeyfile", "server.pem"));
-        if (!pathPKFile.is_complete()) pathPKFile = boost::filesystem::path(GetDataDir()) / pathPKFile;
+        if (!pathPKFile.is_absolute()) pathPKFile = boost::filesystem::path(GetDataDir()) / pathPKFile;
         if (boost::filesystem::exists(pathPKFile)) context.use_private_key_file(pathPKFile.string(), ssl::context::pem);
         else printf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
 

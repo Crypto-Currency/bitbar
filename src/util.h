@@ -12,7 +12,9 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #else
+#ifndef WIN64
 typedef int pid_t; /* define for Windows compatibility */
+#endif
 #endif
 #include <map>
 #include <vector>
