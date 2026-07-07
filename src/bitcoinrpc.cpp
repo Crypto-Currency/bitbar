@@ -33,6 +33,9 @@ using namespace boost;
 using namespace boost::asio;
 using namespace json_spirit;
 
+// by Simone: we enable execution after everything started
+bool enableRpcExecution = false;
+
 void ThreadRPCServer2(void* parg);
 
 static std::string strRPCUserColonPass;
@@ -766,7 +769,21 @@ void ThreadRPCServer2(void* parg)
                 EncodeBase58(&rand_pwd[0],&rand_pwd[0]+32).c_str()),
             _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
         StartShutdown();
-        return;
+        fprintf(stderr, "Shutting down, please wait ");
+        fflush(stderr);
+
+        // Print exactly 10 dots (one every 500ms for a smooth 5-second thread cooldown window)
+        for (int i = 0; i < 10; i++)
+        {
+            boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+            fprintf(stderr, ".");
+            fflush(stderr);
+        }
+        fprintf(stderr, "\n");
+
+        // Force a clean kernel-level exit to prevent any trailing thread assertions
+        _exit(1);
+//        return;
     }
 
     const bool fUseSSL = GetBoolArg("-rpcssl");
@@ -1060,9 +1077,18 @@ void ThreadRPCServer3(void* parg)
         vnThreadsRunning[THREAD_RPCHANDLER]--;
     }
 }
-
+// by Simone: coming from db.cpp, progress of blockchain load
+extern unsigned int loadProgress;
 json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params) const
 {
+  // by Simone: check if is enabled
+  if (!enableRpcExecution)
+  {
+    char m[256];
+    sprintf(m, "Wallet is loading the blockchain (%d%%), please wait", loadProgress);
+    throw JSONRPCError(RPC_MISC_ERROR, m);
+  }
+
     // Find method
     const CRPCCommand *pcmd = tableRPC[strMethod];
     if (!pcmd)

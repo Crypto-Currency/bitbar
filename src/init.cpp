@@ -131,7 +131,15 @@ bool AppInit(int argc, char* argv[])
             fprintf(stderr, "Error: Specified directory does not exist\n");
             Shutdown(NULL);
         }
-        ReadConfigFile(mapArgs, mapMultiArgs);
+        try
+        {
+          ReadConfigFile(mapArgs, mapMultiArgs);
+        }
+        catch (const std::exception& e)
+        {
+          fprintf(stderr, "\nConfiguration File Error: %s\n", e.what());
+          _exit(1);
+        }
 
         if (mapArgs.count("-?") || mapArgs.count("--help"))
         {
@@ -680,6 +688,10 @@ bool AppInit2()
         return false;
     }
 
+ // by Simone: start RPC server before loading the blockchain
+    if (fServer)
+        NewThread(ThreadRPCServer, NULL);
+
     uiInterface.InitMessage(_("Loading block index..."));
     printf("Loading block index...\n");
     nStart = GetTimeMillis();
@@ -910,10 +922,13 @@ bool AppInit2()
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));
 
-    if (fServer)
-        NewThread(ThreadRPCServer, NULL);
+//    if (fServer)
+//       NewThread(ThreadRPCServer, NULL);
 
     // ********************************************************* Step 12: finished
+
+     // by Simone: starting the RPC thread was here, instead we just unleash it
+    enableRpcExecution = true;
 
     uiInterface.InitMessage(_("Done loading"));
     printf("Done loading\n");

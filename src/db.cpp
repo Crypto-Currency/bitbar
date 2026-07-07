@@ -21,6 +21,8 @@
 using namespace std;
 using namespace boost;
 
+unsigned int loadProgress;
+char pString[256];
 
 unsigned int nWalletDBUpdated;
 
@@ -841,6 +843,11 @@ bool CTxDB::LoadBlockIndexGuts()
     unsigned int steptemp=0;
     string tempmess;
 
+    double ccc = 0;
+    double cnt = 0;
+    int oldProgress = -1;
+    cnt = (double)boost::filesystem::file_size(GetDataDir() / "blkindex.dat") / 432.0;
+
     for(;;)
     {
         // Read next record
@@ -885,14 +892,25 @@ bool CTxDB::LoadBlockIndexGuts()
             pindexNew->nBits          = diskindex.nBits;
             pindexNew->nNonce         = diskindex.nNonce;
 
-            tempcount ++;
-            if(tempcount>=1000)
-            {
-              steptemp ++;
-              tempmess=mess+ boost::to_string(steptemp * 1000);
-              uiInterface.InitMessage(_(tempmess.c_str()));
+            ccc++;
+//            tempcount ++;
+//            if(tempcount>=1000)
+//            {
+              int progress = (ccc / cnt) * 100;
+              if (progress > 100)
+              {
+                progress = 100;
+              }
+              if (progress != oldProgress)
+              {
+                loadProgress = progress;        // store for global use
+                oldProgress = progress;
+//              }
+
+              sprintf(pString, _("loading blockchain  (%d\%)").c_str(),progress);
+              uiInterface.InitMessage(pString);
               tempcount=0;
-            }
+              }
 
             // Watch for genesis block
             if (pindexGenesisBlock == NULL && diskindex.GetBlockHash() == hashGenesisBlock)
