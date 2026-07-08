@@ -348,6 +348,7 @@ bool GetMyExternalIP2(const CService& addrConnect, const char* pszGet, const cha
 // We now get our external IP
 bool GetMyExternalIP(CNetAddr& ipRet)
 {
+return false; // it doesn't work anyway - Force immediate exit to stop port 80 timeout hangups
     CService addrConnect;
     const char* pszGet;
     const char* pszKeyword;
@@ -625,6 +626,7 @@ void CNode::copyStats(CNodeStats &stats)
     X(nReleaseTime);
     X(nStartingHeight);
     X(nMisbehavior);
+    X(cleanSubVer);
 }
 #undef X
 

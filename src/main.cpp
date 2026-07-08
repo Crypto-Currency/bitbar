@@ -555,9 +555,12 @@ int64 CTransaction::GetMinFee(unsigned int nBlockSize, bool fAllowFree,
 }
 
 
-bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
-                        bool* pfMissingInputs)
+bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs, bool* pfMissingInputs)
 {
+  if (IsInitialBlockDownload())
+  {
+    return error("AcceptToMemoryPool() : rejecting tx during Initial Block Download");
+  }
     if (pfMissingInputs)
         *pfMissingInputs = false;
 
@@ -2218,11 +2221,29 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         bnNewBlock.SetCompact(pblock->nBits);
         CBigNum bnRequired;
         bnRequired.SetCompact(ComputeMinWork(GetLastBlockIndex(pcheckpoint, pblock->IsProofOfStake())->nBits, deltaTime));
+
         if (bnNewBlock > bnRequired)
         {
+          // PRODUCTION FIX:
+          // Scale the required work floor to accommodate an every-block retargeting engine
+          // Allows the target to expand up to 4x (multiplied by 4) to handle
+          //  massive testnet/mainnet difficulty swings safely
+          CBigNum bnEveryBlockBuffer = bnRequired * 4; 
+
+          // CRITICAL SANITY CHECK:
+          //  Ensure our buffer never goes beyond the absolute minimum difficulty limit
+          CBigNum bnLimit = pblock->IsProofOfStake() ? bnProofOfStakeLimit : bnProofOfWorkLimit;
+          if (bnEveryBlockBuffer > bnLimit)
+          {
+             bnEveryBlockBuffer = bnLimit;
+          }
+
+          if (bnNewBlock > bnEveryBlockBuffer)
+          {
             if (pfrom)
-                pfrom->Misbehaving(100);
+              pfrom->Misbehaving(100);
             return error("ProcessBlock() : block with too little %s", pblock->IsProofOfStake()? "proof-of-stake" : "proof-of-work");
+          }
         }
     }
 
@@ -2823,7 +2844,24 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)
     return true;
 }
 
+static const string CHARS_ALPHA_NUM = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
+static const string SAFE_CHARS[] =
+{
+    CHARS_ALPHA_NUM + " .,;-_/:?@()", // SAFE_CHARS_DEFAULT
+    CHARS_ALPHA_NUM + " .,;-_?:@" // SAFE_CHARS_UA_COMMENT
+};
+
+string SanitizeString(const string& str, int rule)
+{
+    string strResult;
+    for (std::string::size_type i = 0; i < str.size(); i++)
+    {
+        if (SAFE_CHARS[rule].find(str[i]) != std::string::npos)
+            strResult.push_back(str[i]);
+    }
+    return strResult;
+}
 
 
 // The message start string is designed to be unlikely to occur in normal data.
@@ -2875,7 +2913,19 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         if (!vRecv.empty())
             vRecv >> addrFrom >> nNonce;
         if (!vRecv.empty())
-            vRecv >> pfrom->strSubVer;
+        {
+          vRecv >> pfrom->strSubVer;
+          // stop alien wallets from connecting.
+          pfrom->cleanSubVer = SanitizeString(pfrom->strSubVer, 1);
+          printf("peer connecting subver is %s",pfrom->strSubVer.c_str());
+          int iSubVer=pfrom->strSubVer.find("BitBar");
+          if(iSubVer < 1)
+          {
+            printf("  -  disconnecting .....\n");
+            pfrom->fDisconnect = true;
+            return false;
+          }
+        }
         if (!vRecv.empty())
             vRecv >> pfrom->nStartingHeight;
 
@@ -3189,26 +3239,29 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         if (pindex)
             pindex = pindex->pnext;
         int nLimit = 500;
-        printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
+        if(fDebug)
+         printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
         for (; pindex; pindex = pindex->pnext)
         {
             if (pindex->GetBlockHash() == hashStop)
             {
-                printf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                if(fDebug)
+                  printf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
                 // ppcoin: tell downloading node about the latest block if it's
                 // without risk being rejected due to stake connection check
                 if (hashStop != hashBestChain && pindex->GetBlockTime() + nStakeMinAge > pindexBest->GetBlockTime())
-                    pfrom->PushInventory(CInv(MSG_BLOCK, hashBestChain));
+                   pfrom->PushInventory(CInv(MSG_BLOCK, hashBestChain));
                 break;
             }
             pfrom->PushInventory(CInv(MSG_BLOCK, pindex->GetBlockHash()));
             if (--nLimit <= 0)
             {
-                // When this block is requested, we'll send an inv that'll make them
-                // getblocks the next batch of inventory.
+              // When this block is requested, we'll send an inv that'll make them
+              // getblocks the next batch of inventory.
+              if(fDebug)
                 printf("  getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
-                pfrom->hashContinue = pindex->GetBlockHash();
-                break;
+              pfrom->hashContinue = pindex->GetBlockHash();
+              break;
             }
         }
     }
@@ -3252,7 +3305,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
         vector<CBlock> vHeaders;
         int nLimit = 2000;
-        printf("getheaders %d to %s\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str());
+        if(fDebug)
+          printf("getheaders %d to %s\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str());
         for (; pindex; pindex = pindex->pnext)
         {
             vHeaders.push_back(pindex->GetBlockHeader());
@@ -3631,7 +3685,10 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         }
 
         // Resend wallet transactions that haven't gotten in a block yet
-        ResendWalletTransactions();
+        if (!IsInitialBlockDownload()) 
+        {
+          ResendWalletTransactions();
+        }
 
         // Address refresh broadcast
         static int64 nLastRebroadcast;
@@ -4237,10 +4294,13 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
         return error("BitcoinMiner : proof-of-work not meeting target");
 
     //// debug print
-    printf("BitcoinMiner:\n");
-    printf("new block found  \n  hash: %s  \ntarget: %s\n", hash.GetHex().c_str(), hashTarget.GetHex().c_str());
-    pblock->print();
-    printf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue).c_str());
+    if(fDebug)
+    {
+      printf("BitcoinMiner:\n");
+      printf("new block found  \n  hash: %s  \ntarget: %s\n", hash.GetHex().c_str(), hashTarget.GetHex().c_str());
+      pblock->print();
+      printf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue).c_str());
+    }
 
     // Found a solution
     {
@@ -4275,7 +4335,8 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
 {
     void *scratchbuf = scrypt_buffer_alloc();
 
-    printf("CPUMiner started for proof-of-%s\n", fProofOfStake? "stake" : "work");
+    if(fDebug)
+      printf("CPUMiner started for proof-of-%s\n", fProofOfStake? "stake" : "work");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
     // Make this thread recognisable as the mining thread
@@ -4327,7 +4388,8 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
                     continue;
                 }
                 strMintWarning = "";
-                printf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str()); 
+                if(fDebug)
+                  printf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str()); 
                 SetThreadPriority(THREAD_PRIORITY_NORMAL);
                 CheckWork(pblock.get(), *pwalletMain, reservekey);
                 SetThreadPriority(THREAD_PRIORITY_LOWEST);
@@ -4336,7 +4398,8 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
             continue;
         }
 
-        printf("Running BitcoinMiner with %" PRIszu " transactions in block (%u bytes)\n", pblock->vtx.size(),
+        if(fDebug)
+          printf("Running BitcoinMiner with %" PRIszu " transactions in block (%u bytes)\n", pblock->vtx.size(),
                ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
         //
@@ -4476,7 +4539,8 @@ void static ThreadBitcoinMiner(void* parg)
     nHPSTimerStart = 0;
     if (vnThreadsRunning[THREAD_MINER] == 0)
         dHashesPerSec = 0;
-    printf("ThreadBitcoinMiner exiting, %d threads remaining\n", vnThreadsRunning[THREAD_MINER]);
+    if(fDebug)
+      printf("ThreadBitcoinMiner exiting, %d threads remaining\n", vnThreadsRunning[THREAD_MINER]);
 }
 
 

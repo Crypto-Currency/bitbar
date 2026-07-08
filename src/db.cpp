@@ -83,13 +83,23 @@ bool CDBEnv::Open(boost::filesystem::path pathEnv_)
     if (GetBoolArg("-privdb", true))
         nEnvFlags |= DB_PRIVATE;
 
-    int nDbCache = GetArg("-dbcache", 25);
+    int nDbCache = GetArg("-dbcache", 1024);
+    if (nDbCache < 1024) nDbCache = 1024; // Force a healthy 1GB floor
+
     dbenv.set_lg_dir(pathLogDir.string().c_str());
     dbenv.set_cachesize(nDbCache / 1024, (nDbCache % 1024)*1048576, 1);
-    dbenv.set_lg_bsize(1048576);
-    dbenv.set_lg_max(10485760);
-    dbenv.set_lk_max_locks(10000);
-    dbenv.set_lk_max_objects(10000);
+// FIX: Expand log buffer to 8MB and max log size to 100MB 
+    // This allows large block bursts to stay entirely in RAM before disk writing
+    dbenv.set_lg_bsize(8388608);   // 8 MB (Changed from 1048576)
+    dbenv.set_lg_max(104857600);   // 100 MB (Changed from 10485760)
+
+   // FIX: Explode max locks to prevent 0.6.x/0.7.x deadlock loops on modern Testnet blocks
+    dbenv.set_lk_max_locks(300000);   // Changed from 10000
+    dbenv.set_lk_max_objects(300000); // Changed from 10000
+
+   // OPTIONAL: Automatically detect and resolve internal deadlocks inline
+    dbenv.set_lk_detect(DB_LOCK_MINWRITE); 
+
     dbenv.set_errfile(fopen(pathErrorFile.string().c_str(), "a")); /// debug
     dbenv.set_flags(DB_AUTO_COMMIT, 1);
     dbenv.set_flags(DB_TXN_WRITE_NOSYNC, 1);
@@ -123,10 +133,22 @@ void CDBEnv::MakeMock()
     printf("CDBEnv::MakeMock()\n");
 
     dbenv.set_cachesize(1, 0, 1);
-    dbenv.set_lg_bsize(10485760*4);
-    dbenv.set_lg_max(10485760);
-    dbenv.set_lk_max_locks(10000);
-    dbenv.set_lk_max_objects(10000);
+    
+    // Leave or slightly adjust these if needed, but notice the original quirk:
+    // Original code has log buffer size (40MB) LARGER than max log file size (10MB).
+    //    dbenv.set_lg_bsize(10485760*4); // 40 MB log buffer
+    //    dbenv.set_lg_max(10485760);     // 10 MB max log size
+ // Fix the sizing relationship so max log file size accommodates the buffer
+    dbenv.set_lg_bsize(41943040);   // 40 MB buffer
+    dbenv.set_lg_max(104857600);    // 100 MB max log file size
+    
+    // FIX: Explode max locks and objects to prevent test/mock context deadlocks
+    dbenv.set_lk_max_locks(300000);   // Changed from 10000
+    dbenv.set_lk_max_objects(300000); // Changed from 10000
+    
+    // OPTIONAL: Keep lock detection identical to your main initialization
+    dbenv.set_lk_detect(DB_LOCK_MINWRITE); 
+
     dbenv.set_flags(DB_AUTO_COMMIT, 1);
 //    dbenv.log_set_config(DB_LOG_IN_MEMORY, 1);
     int ret = dbenv.open(NULL,
